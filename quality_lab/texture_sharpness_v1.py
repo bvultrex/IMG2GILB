@@ -315,6 +315,7 @@ def patch_embedded_image(
         if offset >= old_alloc_end:
             other["byteOffset"] = offset + delta
 
+    doc["images"][image_index]["mimeType"] = "image/png"
     doc["buffers"][0]["byteLength"] = len(new_bin)
 
     json_bytes = json.dumps(doc, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
