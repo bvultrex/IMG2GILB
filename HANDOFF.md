@@ -241,3 +241,10 @@ PBR-SHA256: `51bd2b279079ba9e69515e5b9ff6b7c4858cd53fe396f822e0509498f0908171`.
 
 Lokales Archiv: `C:\Users\Shadow\Downloads\Anime_Multiview_Test.zip`. Es enthält Runner, Referenzen und Testergebnisse und wird wegen der enthaltenen Nutzerassets nicht automatisch in dieses öffentliche Repository hochgeladen. Der abgeschlossene Export beseitigt nicht die oben beschriebenen Qualitätsgrenzen. Rigging, Quest-Reduktion und Headset-Messung dieses Charakters stehen aus.
 
+
+
+## Nachtrag: Face Textures 1.0 (28.09.2026)
+
+[Release-Stand, Tests und Grenzen](FACE_TEXTURES_1_0.md). Automatische Anime-Gesichtsausrichtung mit weicherem Farbabschluss, unabhängig verschobenem Mund, PBR-Erhalt, Rückfall auf das byteidentische Original bei abgelehnter Erkennung und abschließender Landmarkenprüfung. Zwölf Tests, Wiederholung, Fehlerfall und Blender-Import geprüft; rund 33 Sekunden auf dem Shadow-PC. Lokaler Code: `D:\SF3D_QualityLab\face_v1`; Ergebnis: `D:\SF3D_QualityLab\anime_test\face_1_0\Face_1_0.glb`; Paket: `C:\Users\Shadow\Downloads\Face_Textures_1_0.zip`.
+
+Der 1.0-Stand ist auf einen optionalen lokalen Anime-Gesichtsschritt begrenzt. Ein zweiter vollständiger 3D-Charakter, EXE-Gesamtoberfläche, Rigging und Quest-Gerätetest bleiben offen. Haaransatz und geometrische Gesichtsgrenzen können weiterhin Übergänge zeigen.
