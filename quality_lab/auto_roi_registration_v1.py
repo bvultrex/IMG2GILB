@@ -40,22 +40,35 @@ def support(v):
 
 
 def deterministic_surface_target(mesh, count=3000):
-    vertices = np.asarray(mesh.vertices, dtype=np.float64)
-    faces = np.asarray(mesh.faces, dtype=np.int64)
-    tri = vertices[faces]
-    centroids = tri.mean(axis=1)
-    edges = np.sort(
-        np.vstack((faces[:, [0, 1]], faces[:, [1, 2]], faces[:, [2, 0]])),
-        axis=1,
-    )
-    edges = np.unique(edges, axis=0)
-    midpoints = (vertices[edges[:, 0]] + vertices[edges[:, 1]]) * 0.5
-    candidates = np.vstack((vertices, centroids, midpoints))
+    """Area-weighted deterministic surface densification inside the support mask.
+
+    The previous implementation only considered vertices/edge-midpoints/centroids
+    and could produce fewer candidates than the requested 3000 samples.  This
+    version samples the actual triangle surface with a fixed NumPy seed, then
+    filters by the unchanged support predicate.
+    """
+    sample_count = max(600000, count * 200)
+
+    # trimesh.sample.sample_surface uses NumPy's global RNG. Preserve caller state
+    # so this diagnostic is deterministic without perturbing later optimization.
+    state = np.random.get_state()
+    try:
+        np.random.seed(42)
+        sampled, _ = trimesh.sample.sample_surface(mesh, sample_count)
+    finally:
+        np.random.set_state(state)
+
+    candidates = np.asarray(sampled, dtype=np.float64)
     candidates = candidates[support(candidates)]
     if len(candidates) < count:
-        raise RuntimeError(f"Only {len(candidates)} support samples available.")
-    rng = np.random.default_rng(42)
-    ids = np.sort(rng.choice(len(candidates), size=count, replace=False))
+        raise RuntimeError(
+            f"Only {len(candidates)} support surface samples from {sample_count} "
+            f"deterministic area-weighted samples; need {count}."
+        )
+
+    # Preserve spatial distribution deterministically rather than randomly
+    # subsampling the already-filtered set a second time.
+    ids = np.linspace(0, len(candidates) - 1, count, dtype=np.int64)
     return candidates[ids]
 
 
