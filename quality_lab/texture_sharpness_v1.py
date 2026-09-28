@@ -485,10 +485,14 @@ def main() -> None:
         ),
     }
 
+    integrity_passed = bool(glb_report["integrity_passed"]) if glb_report else True
+    source_preserved = bool(glb_report["source_unchanged"]) if glb_report else True
+
     acceptance = {
         "diagnostic_completed": True,
-        "original_preserved": True,
-        "refine_is_reversible": True,
+        "original_preserved": source_preserved,
+        "refine_is_reversible": source_preserved,
+        "controlled_refine_integrity_passed": integrity_passed,
         "production_accepted": False,
         "geometry_validated_by_this_test": False,
         "texture_should_not_hide_failed_geometry": True,
