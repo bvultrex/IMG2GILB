@@ -2,8 +2,11 @@
 
 Permanent coordination entry point for agents working on IMG2GILB.
 
-**Live coordination thread:** GitHub Issue #undefined
+**Live coordination thread:** GitHub Issue #1  
 https://github.com/bvultrex/IMG2GILB/issues/1
+
+**ChatGPT durable task queue:** [`quality_lab/CHATGPT_TASK_QUEUE.md`](quality_lab/CHATGPT_TASK_QUEUE.md)  
+(Grok maintains ACTIVE + BACKLOG; ChatGPT claims via Issue #1.)
 
 ## Agents
 
@@ -17,7 +20,7 @@ https://github.com/bvultrex/IMG2GILB/issues/1
 Before starting substantial work:
 
 1. Pull/read the latest `main`.
-2. Read the latest comments in Issue #undefined.
+2. Read the latest comments in Issue #1 and `quality_lab/CHATGPT_TASK_QUEUE.md` if you are ChatGPT.
 3. Check recent commits touching the files you plan to edit.
 4. Post a short claim when working in an area another agent may also touch.
 
@@ -25,8 +28,9 @@ After finishing:
 
 1. Commit with a descriptive message.
 2. Run the relevant tests/diagnostics.
-3. Post commit SHA, result, tests, and remaining blockers in Issue #undefined.
+3. Post commit SHA, result, tests, and remaining blockers in Issue #1.
 4. Update durable project documentation when a result changes project status.
+5. If ChatGPT: mark the queue item DONE in Issue #1 (Grok will sync the queue file).
 
 ## Message format
 
@@ -53,31 +57,19 @@ Keep messages concise. Use commits and documentation for full details.
 
 ## Current technical focus
 
-The current fidelity bottleneck is **local geometry preservation**, demonstrated by the mechanical bust fixture:
+Product constraint: Studio must handle **full bodies, objects, and busts** with the same pipeline family (gates/ROI/register/splice must generalize).
 
-- whole-object Hunyuan/TRELLIS/TripoSG tests simplify the reference's three-lens arrangement;
-- a TRELLIS head-only crop partially recovers the asymmetric three-lens arrangement;
-- bounded global registration improves held-out support error but does not reach the registration gate;
-- protected local warp improves support agreement while leaving the central lens region unchanged;
-- the current next test is a **dry splice** that places the warped detail patch into the whole bust without welding it.
+Parallel tracks (2026-09-28):
 
-Active diagnostic files:
+- **Bust local detail:** Auto-ROI v3 interchangeable with fixed crop for densified registration; dry-splice still fails stitch gates (~4 mm p90). Grok owns seam scripts.
+- **Ranger second fixture:** Auto-ROI general fullbody provisional pass; TRELLIS 512/1024 baselines done; SF3D Studio 4-view in progress for belt/pouch quality.
+- **Texture:** ChatGPT assigned sharpness diagnostic (see task queue T1).
 
-- `quality_lab/register_bust_detail.py`
-- `quality_lab/deform_bust_detail.py`
-- `quality_lab/dry_splice_bust_detail.py`
-- `quality_lab/render_dry_splice.py`
-- their `Run_*.bat` runners
-- `quality_lab/GEOMETRY_BENCHMARK_2026-09-28.md`
+Active diagnostic areas:
 
-Latest ChatGPT-side geometry commits at creation of this file:
-
-- `3a297b4` test bounded rotational bust registration
-- `c1542de` add protected local bust detail warp
-- `0a3befc` add local bust warp runner
-- `75aaa8a` add dry splice bust diagnostic
-- `8fa410e` add dry splice diagnostic renders
-- `66accaa` add dry splice runner
+- `quality_lab/auto_roi_*`, `AUTO_ROI_*`, `LOCAL_DETAIL_ACCEPTANCE_GATES.md`
+- Grok-owned bust seam/register/dry-splice/stitch `*_v2+` (do not overwrite without claim)
+- `quality_lab/CHATGPT_TASK_QUEUE.md`
 
 ## Product north star
 
