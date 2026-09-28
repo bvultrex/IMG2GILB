@@ -285,7 +285,19 @@ def patch_embedded_image(
     new_image_bytes: bytes,
     image_index: int,
 ) -> dict:
+    source_raw_before = source_path.read_bytes()
+    source_sha_before = sha256_bytes(source_raw_before)
+
     doc, bin_data, extras = parse_glb(source_path)
+
+    # Capture immutable source-image bytes BEFORE any bufferView offset mutation.
+    original_embedded_images: dict[int, bytes] = {}
+    for i, image_def in enumerate(doc.get("images", [])):
+        if "bufferView" not in image_def:
+            continue
+        payload_i, _, _ = image_bytes(doc, bin_data, i)
+        original_embedded_images[i] = payload_i
+
     old_payload, _, view_index = image_bytes(doc, bin_data, image_index)
     view = doc["bufferViews"][view_index]
     start = int(view.get("byteOffset", 0))
@@ -330,18 +342,17 @@ def patch_embedded_image(
         padded = payload + b"\x00" * (align4(len(payload)) - len(payload))
         chunks.append(struct.pack("<II", len(padded), chunk_type) + padded)
 
-    total = 12 + sum(len(c) for c in chunks)
+    total = 12 + sum(len(chunk) for chunk in chunks)
     glb = struct.pack("<4sII", b"glTF", 2, total) + b"".join(chunks)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(glb)
 
-    # Verify all non-target embedded image payloads survived byte-identically.
+    # Verify against immutable source bytes captured above, not the mutated JSON.
     new_doc, new_bin_parsed, _ = parse_glb(output_path)
     untouched = {}
-    for i, image_def in enumerate(doc.get("images", [])):
-        if i == image_index or "bufferView" not in image_def:
+    for i, before in original_embedded_images.items():
+        if i == image_index:
             continue
-        before, _, _ = image_bytes(doc, bin_data, i)
         after, _, _ = image_bytes(new_doc, new_bin_parsed, i)
         untouched[str(i)] = {
             "before_sha256": sha256_bytes(before),
@@ -349,16 +360,31 @@ def patch_embedded_image(
             "identical": before == after,
         }
 
+    patched_payload, patched_mime, _ = image_bytes(new_doc, new_bin_parsed, image_index)
+    source_sha_after = sha256_bytes(source_path.read_bytes())
+    other_images_identical = all(
+        item["identical"] for item in untouched.values()
+    )
+
     return {
-        "source_glb_sha256": sha256_bytes(source_path.read_bytes()),
+        "source_glb_sha256_before": source_sha_before,
+        "source_glb_sha256_after": source_sha_after,
         "output_glb_sha256": sha256_bytes(output_path.read_bytes()),
         "old_basecolor_sha256": sha256_bytes(old_payload),
-        "new_basecolor_sha256": sha256_bytes(new_image_bytes),
+        "requested_new_basecolor_sha256": sha256_bytes(new_image_bytes),
+        "embedded_new_basecolor_sha256": sha256_bytes(patched_payload),
+        "embedded_new_basecolor_matches_requested": patched_payload == new_image_bytes,
+        "embedded_new_basecolor_mime": patched_mime,
         "other_embedded_images": untouched,
-        "source_unchanged": sha256_bytes(source_path.read_bytes())
-        == sha256_bytes(source_path.read_bytes()),
+        "other_embedded_images_identical": other_images_identical,
+        "source_unchanged": source_sha_before == source_sha_after,
+        "integrity_passed": bool(
+            source_sha_before == source_sha_after
+            and patched_payload == new_image_bytes
+            and patched_mime == "image/png"
+            and other_images_identical
+        ),
     }
-
 
 def resolve_input(job: Path | None, input_path: Path | None) -> tuple[Path, str]:
     if input_path:
