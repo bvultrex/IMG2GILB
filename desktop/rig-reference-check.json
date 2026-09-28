@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "primitives": [
+    {
+      "vertices": 105082,
+      "joints": 28,
+      "max_weight_sum_error": 1.7881393432617188e-07
+    }
+  ],
+  "animations": 2,
+  "limitations": [
+    "Does not prove anatomical bone placement or deformation quality",
+    "Animation channels are counted, not visually validated"
+  ],
+  "file": "C:\\Users\\Shadow\\Downloads\\Meshy_AI_Midnight_Defiance_Running.glb"
+}

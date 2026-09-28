@@ -1,0 +1,30 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Logs / temp
+*.log
+*.tmp
+*.bak
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Large generated model artifacts
+*.safetensors
+*.ckpt
+*.pth
+*.pt
+*.onnx
+
+# Generated 3D/output assets
+*.glb
+*.gltf
+*.obj
+*.fbx
+
+# Common caches
+.cache/
+.cache*/

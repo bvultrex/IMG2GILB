@@ -1,0 +1,86 @@
+{
+  "status": "experimental",
+  "method": "four-view silhouette registration, protected head, sharper incidence weighting",
+  "source_mesh": "D:\\SF3D_QualityLab\\male_anime_validation\\full_pipeline_rig_test\\face\\Face_1_0.glb",
+  "source_sha256": "254700195eb60adfc7087c275c437dc4ad70dca880394b53be6410b956521784",
+  "views": [
+    {
+      "view": "front",
+      "silhouette_iou": 0.9001529812920468,
+      "affine": [
+        [
+          1.4741297960281372,
+          0.0,
+          223.78457641601562
+        ],
+        [
+          0.0,
+          1.4121571779251099,
+          11.689399719238281
+        ]
+      ],
+      "strong_projection_pixels": 236821
+    },
+    {
+      "view": "back",
+      "silhouette_iou": 0.862120680877225,
+      "affine": [
+        [
+          1.472744345664978,
+          0.0,
+          225.27255249023438
+        ],
+        [
+          0.0,
+          1.4301801919937134,
+          9.502252578735352
+        ]
+      ],
+      "strong_projection_pixels": 246118
+    },
+    {
+      "view": "left",
+      "silhouette_iou": 0.702443157746081,
+      "affine": [
+        [
+          1.425516963005066,
+          0.0,
+          261.8323974609375
+        ],
+        [
+          0.0,
+          1.3986784219741821,
+          34.634361267089844
+        ]
+      ],
+      "body_region_iou": 0.7445630382832673,
+      "skipped": "registration_overlap_low"
+    },
+    {
+      "view": "right",
+      "silhouette_iou": 0.6791973261870154,
+      "affine": [
+        [
+          1.4053881168365479,
+          0.0,
+          307.9345397949219
+        ],
+        [
+          0.0,
+          1.374458909034729,
+          38.01298522949219
+        ]
+      ],
+      "body_region_iou": 0.7410662144108542,
+      "skipped": "registration_overlap_low"
+    }
+  ],
+  "changed_atlas_pixels": 778802,
+  "changed_face_pixels": 0,
+  "geometry_uv_material_validation": "passed",
+  "limitations": [
+    "silhouette alignment does not prove semantic correspondence",
+    "reference shadows remain in colour",
+    "side camera mapping assumes the current Hunyuan convention; not a universal registration solution"
+  ]
+}

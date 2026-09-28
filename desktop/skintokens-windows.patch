@@ -1,0 +1,60 @@
+diff --git a/src/model/skin_vae_model.py b/src/model/skin_vae_model.py
+index a2b4e88..a89c179 100755
+--- a/src/model/skin_vae_model.py
++++ b/src/model/skin_vae_model.py
+@@ -15,13 +15,7 @@ from src.rig_package.info.asset import Asset
+ from .spec import ModelSpec, ModelInput, VaeInput
+ from .skin_vae.autoencoders import SkinFSQCVAEModel
+ 
+-try:
+-    from flash_attn_interface import flash_attn_func # type: ignore
+-except Exception as e:
+-    from flash_attn.flash_attn_interface import flash_attn_func as _flash_attn_func
+-    def flash_attn_func(*args, **kwargs):
+-        res = _flash_attn_func(*args, **kwargs)
+-        return res, None
++from src.attention_compat import flash_attn_func, BACKEND
+ 
+ class Perceiver(nn.Module):
+     def __init__(self, channels, out_tokens, num_heads=8):
+diff --git a/src/model/tokenrig.py b/src/model/tokenrig.py
+index ab35e3f..4f25d18 100755
+--- a/src/model/tokenrig.py
++++ b/src/model/tokenrig.py
+@@ -22,13 +22,7 @@ from ..tokenizer.spec import Tokenizer
+ from ..tokenizer.spec import DetokenizeOutput
+ from ..tokenizer.parse import get_tokenizer
+ 
+-try:
+-    from flash_attn_interface import flash_attn_func # type: ignore
+-except Exception as e:
+-    from flash_attn.flash_attn_interface import flash_attn_func as _flash_attn_func
+-    def flash_attn_func(*args, **kwargs):
+-        res = _flash_attn_func(*args, **kwargs)
+-        return res, None
++from src.attention_compat import flash_attn_func, BACKEND
+ 
+ class VocabSwitchingLogitsProcessor(LogitsProcessor):
+     def __init__(self, tokenizer: Tokenizer, switch_token_id, eos_token_id, tokens_per_skin, init):
+@@ -106,7 +100,7 @@ class TokenRig(ModelSpec):
+         llm_config.torch_dtype = torch.bfloat16
+         llm_config.pre_norm = True
+         self.llm_config = llm_config
+-        self.transformer = AutoModelForCausalLM.from_config(config=llm_config, attn_implementation="flash_attention_2").to(torch.bfloat16)
++        self.transformer = AutoModelForCausalLM.from_config(config=llm_config, attn_implementation=BACKEND).to(torch.bfloat16)
+         
+         self.output_proj = nn.Sequential(
+             nn.Linear(self.mesh_encoder.width, self.hidden_size),
+diff --git a/src/server/bpy_server.py b/src/server/bpy_server.py
+index 913eac2..e8234fe 100755
+--- a/src/server/bpy_server.py
++++ b/src/server/bpy_server.py
+@@ -61,7 +61,7 @@ def run():
+         response.content_type = 'application/octet-stream'  # type: ignore
+         return payload
+     
+-    def run_server(): bottle.run(app, host='0.0.0.0', port=BPY_PORT, server='tornado')
++    def run_server(): bottle.run(app, host='127.0.0.1', port=BPY_PORT, server='tornado')
+     threading.Thread(target=run_server, daemon=False).start()
+     
+     while True:

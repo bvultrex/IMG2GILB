@@ -1,0 +1,16 @@
+{
+  "date": "2026-09-28",
+  "method": "actual in-app browser UI and reload",
+  "passed": [
+    "reference restored after reload",
+    "height 175 and texture 1024 restored",
+    "clear references persists across reload",
+    "four references restored with height 170 and texture 2048"
+  ],
+  "not_tested": [
+    "browser profile migration",
+    "full generation from restored draft",
+    "quota exhaustion"
+  ],
+  "screenshot": "D:/SF3D_QualityLab/male_anime_validation/studio-persistent-draft.png"
+}

@@ -1,0 +1,10 @@
+{
+  "core.py": "cc76bfa5e88e16f6d80fa5581354365e49028ccff47588dc10e9463c0dd760f2",
+  "detect.py": "e60fee0b1ee40cd8cdd35107570fdfc60740361c6bf3b157db13a454a39e48a7",
+  "detection_policy.py": "adac9b53b1773a5a4a09b75116d59480dccc587c4ce8033b0720d0ae772e4962",
+  "render_adapter.py": "46bfcd196ed17a73cca43c7c36fb2ce7dfd5df1f4b7edf3ea20c4c6c9c5625fe",
+  "run.py": "3b266a50899a6f737edf9c98b0c6ce728fcab53733a3f880953ef4f32f8c99de",
+  "test_core.py": "6e802950bccc8c387ad965057539bf1117ce232f1802e72243bf8ef2b050e3d2",
+  "test_detection_policy.py": "4821b6eeebaef8b4af9d82c283d36c15ea1a7a8d30b408535b070039b0c8cc52",
+  "RELEASE_1_0_1.md": "a5ef89a7bda9bd5e642ce6f2597a01bf04dc646ec55f5e2da782e5faf27b75a4"
+}

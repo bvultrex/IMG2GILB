@@ -1,0 +1,12 @@
+{
+  "backend": "sdpa",
+  "torch": "2.7.0+cu128",
+  "gpu": "NVIDIA RTX A4500",
+  "fp32_max_error": [
+    1.3709068298339844e-06,
+    1.1920928955078125e-06
+  ],
+  "cases": "4 query heads with 4 and 2 KV heads; reference explicit scaled softmax attention",
+  "status": "passed",
+  "limitation": "not yet a full inference or bfloat16 quality validation"
+}

@@ -1,0 +1,14 @@
+{
+  "repository": "VAST-AI/SkinTokens",
+  "revision": "79736cad0fd84de384d5eede659b4ebd24effe33",
+  "checkpoints": [
+    {
+      "path": "experiments/articulation_xl_quantization_256_token_4/grpo_1400.ckpt",
+      "bytes": 1131603979
+    },
+    {
+      "path": "experiments/skin_vae_2_10_32768/last.ckpt",
+      "bytes": 487311745
+    }
+  ]
+}
