@@ -7,6 +7,20 @@ ROOT=Path(__file__).resolve().parent
 class Cancelled(Exception):pass
 
 def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+def optional_script(cfg, key, filename):
+ candidate=Path(cfg.get(key,str(ROOT.parent/'quality_lab'/filename)))
+ return candidate if candidate.is_file() else Path(cfg['lab'])/filename
+
+def texture_code_signature(cfg, settings):
+ files=[]
+ if settings.get('textures'):
+  if settings.get('paint_multiref',True):files.append(optional_script(cfg,'paint_multiref_script','run_paint_multiref.py'))
+  if settings.get('hybrid_a3'):files.append(optional_script(cfg,'hybrid_a3_script','project_hybrid_a3.py'))
+ return ''.join(str(p.resolve())+sha(p) for p in files)
+
+def hybrid_outputs(path):
+ return [path/'hybrid_a3/report.json',path/'textured_hybrid_a3_color.glb',path/'textured_hybrid_a3_pbr.glb']
+
 def write_json(p,obj):
  # Windows readers/scanners can briefly deny replacement while holding the target.
  # Unique temporary names also prevent unrelated writers from clobbering each other.
@@ -108,6 +122,7 @@ class Job:
   spec=json.loads((self.path/'project.json').read_text());s=spec['settings'];c=self.cfg;lab=Path(c['lab']);py=c['python']
   stages=['prepare','shape']+(['remesh'] if s.get('remesh') else [])+(['uv','paint','bake'] if s['textures'] else [])+(['hybrid_a3'] if s['textures'] and s.get('hybrid_a3') else [])+(['face'] if s['face'] else [])+['finalize']+(['rig'] if s.get('rig') else [])
   fingerprint=hashlib.sha256((json.dumps(spec,sort_keys=True)+sha(ROOT/'stages.py')+sha(ROOT/'pipeline.py')+sha(lab/'run_paint21.py')+sha(lab/'bake_paint21.py')+sha(ROOT/'runtime.json')+sha(ROOT/'rig_stage.py')+sha(ROOT/'validate_rig.py')+sha(ROOT/'walk_preview.py')+(sha(c['face_runtime'])+sum_face_code(Path(c['face_runtime']).parent)+sha(Path(c['face_runtime']).parent/'runtime.json') if s['face'] else '')).encode()).hexdigest()
+  fingerprint=hashlib.sha256((fingerprint+texture_code_signature(c,s)).encode()).hexdigest()
   self.update(status='running',started=time.time(),stages=stages,error=None,completed_stages=0)
   try:
    for i,stage in enumerate(stages):
@@ -132,8 +147,7 @@ class Job:
        if rp.exists():refs.append(str(rp))
       if len(refs)<2:use_multiref=False
      if use_multiref:
-      multiref=Path(c.get('paint_multiref_script',str(ROOT.parent/'quality_lab'/'run_paint_multiref.py')))
-      if not multiref.exists():multiref=lab/'run_paint_multiref.py'
+      multiref=optional_script(c,'paint_multiref_script','run_paint_multiref.py')
       cmd=[py,str(multiref),'--controls',str(self.path/'controls'),'--output',str(self.path/'paint'),'--views','6','--resolution',res,'--references',*refs]
       action=lambda cmd=cmd:self.run_process(cmd)
      else:
@@ -146,9 +160,8 @@ class Job:
      bake_cmd=[py,str(lab/'bake_paint21.py'),'--input',str(self.path/'paint'),'--uv-cache',str(self.path/'controls/uv_mesh.npz'),'--output-prefix',str(self.path/'textured'),'--views','6','--resolution',res,'--upscaler',tex_sr]
      action=lambda bake_cmd=bake_cmd:self.run_process(bake_cmd)
     elif stage=='hybrid_a3':
-     outputs=[self.path/'hybrid_a3/report.json',self.path/'textured_hybrid_a3_color.glb']
-     hybrid_script=Path(c.get('hybrid_a3_script',str(ROOT.parent/'quality_lab'/'project_hybrid_a3.py')))
-     if not hybrid_script.exists():hybrid_script=Path(lab)/'project_hybrid_a3.py'
+     outputs=hybrid_outputs(self.path)
+     hybrid_script=optional_script(c,'hybrid_a3_script','project_hybrid_a3.py')
      vis=ROOT.parent/'_vis_export'/'texture_a3_hybrid'/self.path.name
      # Zenko MR invariant: retain bake PBR metallicRoughness pixels (albedo-only hybrid). hybrid_a3 remains opt-in.
      hybrid_cmd=[py,str(hybrid_script),'--job',str(self.path),'--out',str(self.path/'hybrid_a3'),'--vis',str(vis)]
