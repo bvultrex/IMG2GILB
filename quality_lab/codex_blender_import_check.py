@@ -10,7 +10,10 @@ from mathutils import Vector
 p = argparse.ArgumentParser()
 p.add_argument('--model', type=Path, required=True)
 p.add_argument('--out', type=Path, required=True)
+p.add_argument('--pbr', action='store_true', help='Keep imported material; render with neutral studio lights')
 a = p.parse_args(sys.argv[sys.argv.index('--') + 1:])
+a.model = a.model.resolve()
+a.out = a.out.resolve()
 a.out.mkdir(parents=True, exist_ok=True)
 source_hash = hashlib.sha256(a.model.read_bytes()).hexdigest()
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -28,9 +31,9 @@ report = {'source_sha256': source_hash, 'blender': bpy.app.version_string,
           'mesh_count': len(meshes), 'vertices': sum(len(o.data.vertices) for o in meshes),
           'triangles': sum(len(p.vertices)-2 for o in meshes for p in o.data.polygons),
           'extents_m': list(hi-lo), 'images': images,
-          'scope': 'Independent GLB import and base-color emission render; PBR lighting and Studio UI not covered'}
+          'scope': 'Independent GLB import and '+('PBR studio-light render' if a.pbr else 'base-color emission render')+'; Studio UI not covered'}
 # Link imported base-color input to emission, only in this transient Blender scene.
-for mat in bpy.data.materials:
+for mat in ([] if a.pbr else bpy.data.materials):
     if not mat.use_nodes:
         continue
     nodes, links = mat.node_tree.nodes, mat.node_tree.links
@@ -45,9 +48,21 @@ for mat in bpy.data.materials:
             emission.inputs['Color'].default_value = base.default_value
         links.new(emission.outputs[0], output.inputs['Surface'])
 scene = bpy.context.scene
+if a.pbr:
+    scene.world = bpy.data.worlds.new('NeutralStudio')
+    scene.world.use_nodes = True
+    scene.world.node_tree.nodes['Background'].inputs['Color'].default_value = (0.18, 0.18, 0.18, 1)
+    scene.world.node_tree.nodes['Background'].inputs['Strength'].default_value = 0.35
+    for offset, energy in [((1, -2, 2), 65), ((-2, -1, 1), 35), ((0, 2, 2), 70)]:
+        bpy.ops.object.light_add(type='AREA', location=center+Vector(offset)*extent)
+        light = bpy.context.object
+        light.data.energy = energy*extent**2
+        light.data.shape = 'DISK'
+        light.data.size = extent*2
+        light.rotation_euler = (center-light.location).to_track_quat('-Z','Y').to_euler()
 scene.render.engine = 'CYCLES'
 scene.cycles.device = 'CPU'
-scene.cycles.samples = 8
+scene.cycles.samples = 16 if a.pbr else 8
 scene.render.threads_mode = 'FIXED'
 scene.render.threads = 4
 scene.render.resolution_x = 640
@@ -61,7 +76,7 @@ camera.rotation_euler = (center-camera.location).to_track_quat('-Z', 'Y').to_eul
 camera.data.type = 'ORTHO'
 camera.data.ortho_scale = extent*1.12
 scene.camera = camera
-scene.render.filepath = str(a.out/'front_unlit.png')
+scene.render.filepath = str(a.out/('front_pbr.png' if a.pbr else 'front_unlit.png'))
 bpy.ops.render.render(write_still=True)
 report['source_unchanged'] = hashlib.sha256(a.model.read_bytes()).hexdigest() == source_hash
 assert report['source_unchanged']
