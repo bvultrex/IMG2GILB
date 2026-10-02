@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 import project_hybrid_a3 as hybrid
 
-p=argparse.ArgumentParser();p.add_argument('--job',type=Path,required=True);p.add_argument('--interior',action='store_true');p.add_argument('--out',type=Path);a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--job',type=Path,required=True);p.add_argument('--interior',action='store_true');p.add_argument('--out',type=Path);p.add_argument('--exclusive-face',action='store_true');a=p.parse_args()
 job=a.job.resolve();out=a.out.resolve() if a.out else job/('codex_face_similarity_interior' if a.interior else 'codex_face_similarity');out.mkdir(parents=True,exist_ok=False)
 original=hybrid.face_iso_extract_micro_delta
 def similarity(matrix,**kwargs):
@@ -40,7 +40,7 @@ if a.interior:
         return result
     hybrid.micro_align_front=audited_micro
 baseline=job/'output.glb';before=hashlib.sha256(baseline.read_bytes()).hexdigest()
-hybrid.run(job,out,None,None,color_glb=out/'candidate_color.glb',pbr_glb=out/'candidate_pbr.glb',source_pbr=job/'textured_pbr.glb',face_iso=True)
+hybrid.run(job,out,None,None,color_glb=out/'candidate_color.glb',pbr_glb=out/'candidate_pbr.glb',source_pbr=job/'textured_pbr.glb',face_iso=True,exclusive_face=a.exclusive_face)
 unchanged=before==hashlib.sha256(baseline.read_bytes()).hexdigest()
 (out/'experiment.json').write_text(json.dumps({'baseline_sha256':before,'baseline_unchanged':unchanged,'iou_gate_unchanged':True,'production_accepted':False},indent=2))
 assert unchanged
