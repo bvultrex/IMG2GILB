@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import math
 import sys
 from pathlib import Path
 import bpy
@@ -11,6 +12,8 @@ p = argparse.ArgumentParser()
 p.add_argument('--model', type=Path, required=True)
 p.add_argument('--out', type=Path, required=True)
 p.add_argument('--pbr', action='store_true', help='Keep imported material; render with neutral studio lights')
+p.add_argument('--angles', type=float, nargs='+', default=[0], help='Azimuths in degrees; zero is front')
+p.add_argument('--resolution', type=int, default=640)
 a = p.parse_args(sys.argv[sys.argv.index('--') + 1:])
 a.model = a.model.resolve()
 a.out = a.out.resolve()
@@ -65,8 +68,8 @@ scene.cycles.device = 'CPU'
 scene.cycles.samples = 16 if a.pbr else 8
 scene.render.threads_mode = 'FIXED'
 scene.render.threads = 4
-scene.render.resolution_x = 640
-scene.render.resolution_y = 640
+scene.render.resolution_x = a.resolution
+scene.render.resolution_y = a.resolution
 scene.render.resolution_percentage = 100
 scene.render.film_transparent = True
 scene.view_settings.view_transform = 'Standard'
@@ -76,8 +79,15 @@ camera.rotation_euler = (center-camera.location).to_track_quat('-Z', 'Y').to_eul
 camera.data.type = 'ORTHO'
 camera.data.ortho_scale = extent*1.12
 scene.camera = camera
-scene.render.filepath = str(a.out/('front_pbr.png' if a.pbr else 'front_unlit.png'))
-bpy.ops.render.render(write_still=True)
+report['renders'] = []
+for angle in a.angles:
+    radians = math.radians(angle)
+    camera.location = center + Vector((math.sin(radians), -math.cos(radians), 0))*extent*3
+    camera.rotation_euler = (center-camera.location).to_track_quat('-Z', 'Y').to_euler()
+    name = 'front' if angle == 0 else 'angle_'+str(angle).replace('.', '_')
+    scene.render.filepath = str(a.out/(name+('_pbr.png' if a.pbr else '_unlit.png')))
+    bpy.ops.render.render(write_still=True)
+    report['renders'].append({'azimuth':angle, 'resolution':a.resolution, 'path':scene.render.filepath})
 report['source_unchanged'] = hashlib.sha256(a.model.read_bytes()).hexdigest() == source_hash
 assert report['source_unchanged']
 (a.out/'import_report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
