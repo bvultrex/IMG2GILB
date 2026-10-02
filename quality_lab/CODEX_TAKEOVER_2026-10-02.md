@@ -90,3 +90,8 @@ Post-gate Ranger replay finished successfully; final GLB SHA256 is byte-identica
 
 ## Mechanical negative control exposed unintended face fallback
 bust_postgate_check finished but FAILS semantic skip requirement: src=false/dst=false detector evidence still entered ECC (+5.735,-4.105) and face Paint weighting over heuristic upper silhouette. No human face detected; this was not a valid automatic skip. Added early skip in isolated audited micro path when both detections explicitly false: preserve image/matrix/IoU, return no face weights, retain general object projection. Missing metadata or one-sided detection does not masquerade as a negative pair. Five CPU tests pass. Same bust replay running quality_runs/bust_face_skip_verified and matching log. Inspect report, invariants and independent render before promotion. Production defaults remain unchanged.
+
+## Mechanical skip replay passed structural checks
+bust_face_skip_verified run completed: front metadata explicitly skipped=no_detected_face, project_face=false, weight_map=none_keep_object_projection. No heuristic face warp/weights. CPU bust_skip_invariants.json confirms exact mesh/faces/UV/MR retention. Independent Blender render in progress (session58001) at0/+35/180, output quality_runs/bust_matched_face_skip. Visual inspection still pending; no production promotion.
+
+Future experimental runs now write execution.json with input/script hashes and settings before processing, plus final GLB hashes after success. This was added after this bust run started and is NOT retroactively claimed for it. Syntax checked; baseline hash protection retained.
