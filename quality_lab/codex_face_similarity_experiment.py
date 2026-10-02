@@ -5,8 +5,8 @@ import numpy as np
 import cv2
 import project_hybrid_a3 as hybrid
 
-p=argparse.ArgumentParser();p.add_argument('--job',type=Path,required=True);p.add_argument('--interior',action='store_true');a=p.parse_args()
-job=a.job.resolve();out=job/('codex_face_similarity_interior' if a.interior else 'codex_face_similarity');out.mkdir(exist_ok=False)
+p=argparse.ArgumentParser();p.add_argument('--job',type=Path,required=True);p.add_argument('--interior',action='store_true');p.add_argument('--out',type=Path);a=p.parse_args()
+job=a.job.resolve();out=a.out.resolve() if a.out else job/('codex_face_similarity_interior' if a.interior else 'codex_face_similarity');out.mkdir(parents=True,exist_ok=False)
 original=hybrid.face_iso_extract_micro_delta
 def similarity(matrix,**kwargs):
     fallback,meta=original(matrix,**kwargs)
