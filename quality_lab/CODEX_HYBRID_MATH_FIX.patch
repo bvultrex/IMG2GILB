@@ -112,13 +112,20 @@
          blend_sum += color * weight
          weight_sum += weight
  
-@@ -1339,8 +1352,13 @@
+@@ -1339,8 +1352,20 @@
          aligned_preview[name] = (rgb, mask > 0, rendered)
  
      confidence = weight_sum.clamp(0, 1)
 -    projected = blend_sum / weight_sum.clamp_min(1e-6)
 +    projected = best_color if best_source else blend_sum / weight_sum.clamp_min(1e-6)
 +    report["projection_mix"] = "best_source_same_confidence" if best_source else "weighted_average"
++    if best_source:
++        np.savez_compressed(out_dir / "projection_components.npz",
++                            base=np.asarray(base,dtype=np.float32),
++                            selected=projected.detach().cpu().numpy(),
++                            averaged=(blend_sum / weight_sum.clamp_min(1e-6)).detach().cpu().numpy(),
++                            confidence=confidence.detach().cpu().numpy(),
++                            strongest_weight=best_weight.detach().cpu().numpy())
      mixed = torch.as_tensor(base, device="cuda") * (1 - confidence) + projected * confidence
 +    if exclusive_front is not None:
 +        front_color, face_gate = exclusive_front
