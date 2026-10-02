@@ -1,9 +1,13 @@
 import unittest
 import cv2
 import numpy as np
-from face_transform_math import ecc_to_forward, face_feature_indices, blend_valid_face_interior, gate_post_warp
+from face_transform_math import ecc_to_forward, face_feature_indices, blend_valid_face_interior, gate_post_warp, no_detected_face
 
 class ECCDirectionTest(unittest.TestCase):
+ def test_skip_requires_two_explicit_negative_detections(self):
+  self.assertTrue(no_detected_face({'src':False,'dst':False}))
+  for q in ({},{'src':False},{'src':True,'dst':False},{'src':False,'dst':True}):
+   self.assertFalse(no_detected_face(q))
  def test_post_warp_rejection_changes_projection_weights(self):
   image=np.zeros((8,8,4),np.uint8)
   weights=np.ones((8,8))

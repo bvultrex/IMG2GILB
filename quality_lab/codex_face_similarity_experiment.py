@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import cv2
 import project_hybrid_a3 as hybrid
-from face_transform_math import blend_valid_face_interior, gate_post_warp
+from face_transform_math import blend_valid_face_interior, gate_post_warp, no_detected_face
 
 p=argparse.ArgumentParser();p.add_argument('--job',type=Path,required=True);p.add_argument('--interior',action='store_true');p.add_argument('--out',type=Path);p.add_argument('--exclusive-face',action='store_true');a=p.parse_args()
 job=a.job.resolve();out=a.out.resolve() if a.out else job/('codex_face_similarity_interior' if a.interior else 'codex_face_similarity');out.mkdir(parents=True,exist_ok=False)
@@ -29,6 +29,13 @@ if a.interior:
     hybrid.apply_face_local_warp=interior_warp
     original_micro=hybrid.micro_align_front
     def audited_micro(image,rendered,*args,**kwargs):
+        before_quality=hybrid.face_landmark_quality(image[:,:,:3].astype(np.float32)/255.,rendered[:,:,:3])
+        if no_detected_face(before_quality):
+            iou=hybrid.silhouette_iou(image[:,:,3]>127,rendered[:,:,3]>.5)
+            return image,args[0],float(iou),{
+                'accepted':False,'project_face':False,'skipped':'no_detected_face',
+                'landmark_quality':before_quality,'interior_alpha_preserved':True,
+                'weight_map':'none_keep_object_projection'},None
         result=original_micro(image,rendered,*args,**kwargs)
         after=result[0]
         metadata=result[3]

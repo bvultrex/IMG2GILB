@@ -2,6 +2,10 @@
 import cv2
 import numpy as np
 
+def no_detected_face(quality):
+    """Only explicit negative detections permit skipping the face-specific path."""
+    return quality.get('src') is False and quality.get('dst') is False
+
 def gate_post_warp(result, quality, weight_map_factory):
     """Fail closed on missing/failed post-warp evidence; keep body alignment."""
     image, matrix, iou, metadata, weights = result
