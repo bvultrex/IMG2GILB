@@ -49,7 +49,7 @@
  
  
 -def run(job: Path, out_dir: Path, landmarks_path: Path | None, vis_dir: Path | None, atlas_size: int = 2048, atlas_path: Path | None = None, color_glb: Path | None = None, pbr_glb: Path | None = None, jaw_blend: bool = False, phase2b: bool = False, extra_render_azims: list[float] | None = None, no_face_micro: bool = False, source_pbr: Path | None = None, mr_atlas: Path | None = None, face_iso: bool = False) -> dict:
-+def run(job: Path, out_dir: Path, landmarks_path: Path | None, vis_dir: Path | None, atlas_size: int = 2048, atlas_path: Path | None = None, color_glb: Path | None = None, pbr_glb: Path | None = None, jaw_blend: bool = False, phase2b: bool = False, extra_render_azims: list[float] | None = None, no_face_micro: bool = False, source_pbr: Path | None = None, mr_atlas: Path | None = None, face_iso: bool = False, exclusive_face: bool = False, search_oblique: bool = False, best_source: bool = False, front_back_only: bool = False) -> dict:
++def run(job: Path, out_dir: Path, landmarks_path: Path | None, vis_dir: Path | None, atlas_size: int = 2048, atlas_path: Path | None = None, color_glb: Path | None = None, pbr_glb: Path | None = None, jaw_blend: bool = False, phase2b: bool = False, extra_render_azims: list[float] | None = None, no_face_micro: bool = False, source_pbr: Path | None = None, mr_atlas: Path | None = None, face_iso: bool = False, exclusive_face: bool = False, search_oblique: bool = False, best_source: bool = False, front_back_only: bool = False, camera_azims: dict | None = None) -> dict:
      job = job.resolve()
      out_dir.mkdir(parents=True, exist_ok=True)
      if vis_dir:
@@ -73,12 +73,15 @@
      weight_sum = torch.zeros((atlas_size, atlas_size, 1), device="cuda")
  
      IOU_WARN = 0.72
-@@ -1141,18 +1141,23 @@
+@@ -1141,18 +1141,26 @@
              candidates = [0.0]
              elev = 0.0
  
 +        if search_oblique and name in ("left", "right"):
 +            candidates = [90.,270.,30.,45.,60.,75.,285.,300.,315.,330.]
++
++        if camera_azims and name in camera_azims:
++            candidates = [float(camera_azims[name])]
 +
          # Pick azim by bbox IoU when ambiguous
          best_az = candidates[0]
@@ -97,7 +100,7 @@
              if iou0 > best_pre_iou:
                  best_pre_iou, best_az, best_target, best_rendered = iou0, az, target, rendered
  
-@@ -1162,6 +1167,7 @@
+@@ -1162,6 +1170,7 @@
  
          base_m = bbox_matrix(source_mask, target)
          matrix, iou, align_meta = refine_alignment(rgba, target, base_m, atlas_size)
@@ -105,7 +108,7 @@
          warped = warp_rgba(rgba, matrix, atlas_size)
  
          used_landmarks = False
-@@ -1307,6 +1313,16 @@
+@@ -1307,6 +1316,16 @@
          else:
              view_boost = 1.0 if name in ("front", "back") else 0.55
          weight = a * incidence * view_boost
@@ -122,7 +125,7 @@
          blend_sum += color * weight
          weight_sum += weight
  
-@@ -1339,8 +1355,20 @@
+@@ -1339,8 +1358,20 @@
          aligned_preview[name] = (rgb, mask > 0, rendered)
  
      confidence = weight_sum.clamp(0, 1)
