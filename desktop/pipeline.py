@@ -15,7 +15,10 @@ def texture_code_signature(cfg, settings):
  files=[]
  if settings.get('textures'):
   if settings.get('paint_multiref',True):files.append(optional_script(cfg,'paint_multiref_script','run_paint_multiref.py'))
-  if settings.get('hybrid_a3'):files.append(optional_script(cfg,'hybrid_a3_script','project_hybrid_a3.py'))
+  if settings.get('hybrid_a3'):
+   script=optional_script(cfg,'hybrid_a3_script','project_hybrid_a3.py');files.append(script)
+   helper=script.with_name('face_transform_math.py')
+   if helper.is_file():files.append(helper)
  return ''.join(str(p.resolve())+sha(p) for p in files)
 
 def hybrid_outputs(path):
