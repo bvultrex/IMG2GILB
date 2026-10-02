@@ -1,9 +1,25 @@
 import unittest
 import cv2
 import numpy as np
-from face_transform_math import ecc_to_forward, face_feature_indices, blend_valid_face_interior
+from face_transform_math import ecc_to_forward, face_feature_indices, blend_valid_face_interior, gate_post_warp
 
 class ECCDirectionTest(unittest.TestCase):
+ def test_post_warp_rejection_changes_projection_weights(self):
+  image=np.zeros((8,8,4),np.uint8)
+  weights=np.ones((8,8))
+  result=(image,None,.9,{'project_face':True,'accepted':True,'weight_roi':[1,1,7,7]},weights)
+  def fallback(mask,roi,**kwargs):
+   self.assertFalse(kwargs['project_face'])
+   self.assertEqual(roi,(1,1,7,7))
+   return np.zeros((8,8))
+  for quality in ({'ok':False},{}):
+   gated=gate_post_warp(result,quality,fallback)
+   self.assertFalse(gated[3]['project_face'])
+   self.assertEqual(gated[4].sum(),0)
+   self.assertIs(gated[0],image)
+  passed=gate_post_warp(result,{'ok':True},fallback)
+  self.assertTrue(passed[3]['project_face'])
+  self.assertIs(passed[4],weights)
  def test_near_opaque_interpolation_does_not_leave_old_features(self):
   source=np.zeros((64,64,4),np.uint8);source[:,:,3]=254
   candidate=source.copy();candidate[:,:,:3]=220;candidate[:,:,3]=253

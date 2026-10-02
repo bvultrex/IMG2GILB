@@ -2,6 +2,21 @@
 import cv2
 import numpy as np
 
+def gate_post_warp(result, quality, weight_map_factory):
+    """Fail closed on missing/failed post-warp evidence; keep body alignment."""
+    image, matrix, iou, metadata, weights = result
+    metadata = dict(metadata)
+    metadata['post_warp_landmark_quality'] = {k:v for k,v in quality.items() if k != 'affine'}
+    if metadata.get('project_face') and quality.get('ok') is not True:
+        metadata['project_face'] = False
+        metadata['face_reject_reason'] = 'post_warp_landmark_quality'
+        metadata['weight_map'] = 'face_iso_paint_post_warp_reject'
+        roi = metadata.get('weight_roi', metadata.get('roi'))
+        if roi is None:
+            raise ValueError('Cannot safely mask rejected face without ROI')
+        weights = weight_map_factory(image[:,:,3] > 127, tuple(roi), project_face=False, body_scale=1.00)
+    return image, matrix, iou, metadata, weights
+
 def blend_valid_face_interior(image, candidate):
     """Preserve coverage while accepting near-opaque interpolation (251..255)."""
     valid=((image[:,:,3]>250)&(candidate[:,:,3]>250)).astype(np.uint8)

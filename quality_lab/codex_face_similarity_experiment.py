@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import cv2
 import project_hybrid_a3 as hybrid
-from face_transform_math import blend_valid_face_interior
+from face_transform_math import blend_valid_face_interior, gate_post_warp
 
 p=argparse.ArgumentParser();p.add_argument('--job',type=Path,required=True);p.add_argument('--interior',action='store_true');p.add_argument('--out',type=Path);p.add_argument('--exclusive-face',action='store_true');a=p.parse_args()
 job=a.job.resolve();out=a.out.resolve() if a.out else job/('codex_face_similarity_interior' if a.interior else 'codex_face_similarity');out.mkdir(parents=True,exist_ok=False)
@@ -34,8 +34,7 @@ if a.interior:
         metadata=result[3]
         metadata['interior_alpha_preserved']=bool(np.array_equal(image[:,:,3],after[:,:,3]))
         q=hybrid.face_landmark_quality(after[:,:,:3].astype(np.float32)/255.,rendered[:,:,:3])
-        metadata['post_warp_landmark_quality']={k:v for k,v in q.items() if k!='affine'}
-        return result
+        return gate_post_warp(result, q, hybrid.face_iso_weight_map)
     hybrid.micro_align_front=audited_micro
 baseline=job/'output.glb';before=hashlib.sha256(baseline.read_bytes()).hexdigest()
 hybrid.run(job,out,None,None,color_glb=out/'candidate_color.glb',pbr_glb=out/'candidate_pbr.glb',source_pbr=job/'textured_pbr.glb',face_iso=True,exclusive_face=a.exclusive_face)
