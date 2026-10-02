@@ -22,7 +22,7 @@ if a.interior:
     original_warp=hybrid.apply_face_local_warp
     def interior_warp(image,*args,**kwargs):
         candidate=original_warp(image,*args,**kwargs)
-        valid=((image[:,:,3]>=254)&(candidate[:,:,3]>=254)).astype(np.uint8)
+        valid=((image[:,:,3]>250)&(candidate[:,:,3]>250)).astype(np.uint8)
         weight=np.clip(cv2.distanceTransform(valid,cv2.DIST_L2,5)/12.,0,1)[:,:,None]
         result=image.copy()
         result[:,:,:3]=np.clip(image[:,:,:3]*(1-weight)+candidate[:,:,:3]*weight,0,255).astype(np.uint8)
