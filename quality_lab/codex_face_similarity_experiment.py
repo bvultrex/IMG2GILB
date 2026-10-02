@@ -6,13 +6,13 @@ import cv2
 import project_hybrid_a3 as hybrid
 from face_transform_math import blend_valid_face_interior, gate_post_warp, no_detected_face
 
-p=argparse.ArgumentParser();p.add_argument('--job',type=Path,required=True);p.add_argument('--interior',action='store_true');p.add_argument('--out',type=Path);p.add_argument('--exclusive-face',action='store_true');a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--job',type=Path,required=True);p.add_argument('--interior',action='store_true');p.add_argument('--out',type=Path);p.add_argument('--exclusive-face',action='store_true');p.add_argument('--search-oblique',action='store_true');a=p.parse_args()
 job=a.job.resolve();out=a.out.resolve() if a.out else job/('codex_face_similarity_interior' if a.interior else 'codex_face_similarity');out.mkdir(parents=True,exist_ok=False)
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 provenance={
     'started_unix':time.time(),'argv':sys.argv[1:],
-    'settings':{'interior':a.interior,'exclusive_face':a.exclusive_face,'face_iso':True},
+    'settings':{'interior':a.interior,'exclusive_face':a.exclusive_face,'face_iso':True,'search_oblique':a.search_oblique},
     'implementation_sha256':{Path(p).name:digest(p) for p in (
         __file__,hybrid.__file__,Path(__file__).with_name('face_transform_math.py'))},
     'input_sha256':{str(p.relative_to(job)):digest(p) for p in
@@ -56,7 +56,7 @@ if a.interior:
         return gate_post_warp(result, q, hybrid.face_iso_weight_map)
     hybrid.micro_align_front=audited_micro
 baseline=job/'output.glb';before=hashlib.sha256(baseline.read_bytes()).hexdigest()
-hybrid.run(job,out,None,None,color_glb=out/'candidate_color.glb',pbr_glb=out/'candidate_pbr.glb',source_pbr=job/'textured_pbr.glb',face_iso=True,exclusive_face=a.exclusive_face)
+hybrid.run(job,out,None,None,color_glb=out/'candidate_color.glb',pbr_glb=out/'candidate_pbr.glb',source_pbr=job/'textured_pbr.glb',face_iso=True,exclusive_face=a.exclusive_face,search_oblique=a.search_oblique)
 unchanged=before==hashlib.sha256(baseline.read_bytes()).hexdigest()
 (out/'experiment.json').write_text(json.dumps({'baseline_sha256':before,'baseline_unchanged':unchanged,'iou_gate_unchanged':True,'production_accepted':False},indent=2))
 assert unchanged
