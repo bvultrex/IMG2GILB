@@ -12,9 +12,12 @@ p = argparse.ArgumentParser()
 p.add_argument('--model', type=Path, required=True)
 p.add_argument('--out', type=Path, required=True)
 p.add_argument('--pbr', action='store_true', help='Keep imported material; render with neutral studio lights')
+p.add_argument('--clay', action='store_true', help='Replace materials transiently to isolate geometry defects')
 p.add_argument('--angles', type=float, nargs='+', default=[0], help='Azimuths in degrees; zero is front')
 p.add_argument('--resolution', type=int, default=640)
 a = p.parse_args(sys.argv[sys.argv.index('--') + 1:])
+if a.clay and a.pbr:
+    p.error('--clay and --pbr are mutually exclusive')
 a.model = a.model.resolve()
 a.out = a.out.resolve()
 a.out.mkdir(parents=True, exist_ok=True)
@@ -29,14 +32,24 @@ hi = Vector([max(p[i] for p in points) for i in range(3)])
 center = (lo + hi) / 2
 extent = max(hi-lo)
 images = [{'name': i.name, 'size': list(i.size)} for i in bpy.data.images if i.type == 'IMAGE']
-assert any(i['size'][0] > 0 for i in images), 'No decoded texture'
+if not a.clay:
+    assert any(i['size'][0] > 0 for i in images), 'No decoded texture'
 report = {'source_sha256': source_hash, 'blender': bpy.app.version_string,
           'mesh_count': len(meshes), 'vertices': sum(len(o.data.vertices) for o in meshes),
           'triangles': sum(len(p.vertices)-2 for o in meshes for p in o.data.polygons),
           'extents_m': list(hi-lo), 'images': images,
-          'scope': 'Independent GLB import and '+('PBR studio-light render' if a.pbr else 'base-color emission render')+'; Studio UI not covered'}
+          'scope': 'Independent GLB import and '+('clay geometry render' if a.clay else 'PBR studio-light render' if a.pbr else 'base-color emission render')+'; Studio UI not covered'}
+if a.clay:
+    clay = bpy.data.materials.new('AuditClay')
+    clay.use_nodes = True
+    shader = clay.node_tree.nodes.get('Principled BSDF')
+    shader.inputs['Base Color'].default_value = (.5,.5,.5,1)
+    shader.inputs['Roughness'].default_value = .8
+    for obj in meshes:
+        obj.data.materials.clear()
+        obj.data.materials.append(clay)
 # Link imported base-color input to emission, only in this transient Blender scene.
-for mat in ([] if a.pbr else bpy.data.materials):
+for mat in ([] if a.pbr or a.clay else bpy.data.materials):
     if not mat.use_nodes:
         continue
     nodes, links = mat.node_tree.nodes, mat.node_tree.links
@@ -51,7 +64,7 @@ for mat in ([] if a.pbr else bpy.data.materials):
             emission.inputs['Color'].default_value = base.default_value
         links.new(emission.outputs[0], output.inputs['Surface'])
 scene = bpy.context.scene
-if a.pbr:
+if a.pbr or a.clay:
     scene.world = bpy.data.worlds.new('NeutralStudio')
     scene.world.use_nodes = True
     scene.world.node_tree.nodes['Background'].inputs['Color'].default_value = (0.18, 0.18, 0.18, 1)
@@ -65,7 +78,7 @@ if a.pbr:
         light.rotation_euler = (center-light.location).to_track_quat('-Z','Y').to_euler()
 scene.render.engine = 'CYCLES'
 scene.cycles.device = 'CPU'
-scene.cycles.samples = 16 if a.pbr else 8
+scene.cycles.samples = 16 if a.pbr or a.clay else 8
 scene.render.threads_mode = 'FIXED'
 scene.render.threads = 4
 scene.render.resolution_x = a.resolution
@@ -85,7 +98,7 @@ for angle in a.angles:
     camera.location = center + Vector((math.sin(radians), -math.cos(radians), 0))*extent*3
     camera.rotation_euler = (center-camera.location).to_track_quat('-Z', 'Y').to_euler()
     name = 'front' if angle == 0 else 'angle_'+str(angle).replace('.', '_')
-    scene.render.filepath = str(a.out/(name+('_pbr.png' if a.pbr else '_unlit.png')))
+    scene.render.filepath = str(a.out/(name+('_clay.png' if a.clay else '_pbr.png' if a.pbr else '_unlit.png')))
     bpy.ops.render.render(write_still=True)
     report['renders'].append({'azimuth':angle, 'resolution':a.resolution, 'path':scene.render.filepath})
 report['source_unchanged'] = hashlib.sha256(a.model.read_bytes()).hexdigest() == source_hash
