@@ -87,6 +87,15 @@ class API(BaseHTTPRequestHandler):
       if key in settings and not isinstance(settings[key],bool):raise ValueError('Ungültiger Schalter: '+key)
      if settings.get('rig',False) and not rig_available():raise ValueError('Automatisches Rigging ist noch nicht verfügbar.')
      s={'quality':quality,'triangles':triangles,'height_cm':height,'texture_size':res,'textures':settings.get('textures',True),'face':settings.get('face',False),'rig':settings.get('rig',False),'seed':42}
+     # Opt-in quality-jump flags (default OFF / unset). Not Studio UI defaults.
+     if settings.get('hybrid_a3') is True:s['hybrid_a3']=True
+     if 'paint_multiref' in settings:
+      if not isinstance(settings['paint_multiref'],bool):raise ValueError('paint_multiref muss bool sein.')
+      s['paint_multiref']=settings['paint_multiref']
+     if 'texture_sr' in settings:
+      tsr=settings['texture_sr']
+      if tsr not in ('pil','realesrgan'):raise ValueError('texture_sr muss pil oder realesrgan sein.')
+      s['texture_sr']=tsr
      # Opt-in finalize lineage (default OFF). Not a Studio UI default.
      fc=settings.get('finalize_candidate')
      if fc not in (None, False, ''):

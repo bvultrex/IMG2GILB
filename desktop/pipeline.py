@@ -106,7 +106,7 @@ class Job:
   except Exception as exc:self.update(status='failed',error=str(exc),finished=time.time())
  def _run(self):
   spec=json.loads((self.path/'project.json').read_text());s=spec['settings'];c=self.cfg;lab=Path(c['lab']);py=c['python']
-  stages=['prepare','shape']+(['uv','paint','bake'] if s['textures'] else [])+(['face'] if s['face'] else [])+['finalize']+(['rig'] if s.get('rig') else [])
+  stages=['prepare','shape']+(['remesh'] if s.get('remesh') else [])+(['uv','paint','bake'] if s['textures'] else [])+(['hybrid_a3'] if s['textures'] and s.get('hybrid_a3') else [])+(['face'] if s['face'] else [])+['finalize']+(['rig'] if s.get('rig') else [])
   fingerprint=hashlib.sha256((json.dumps(spec,sort_keys=True)+sha(ROOT/'stages.py')+sha(ROOT/'pipeline.py')+sha(lab/'run_paint21.py')+sha(lab/'bake_paint21.py')+sha(ROOT/'runtime.json')+sha(ROOT/'rig_stage.py')+sha(ROOT/'validate_rig.py')+sha(ROOT/'walk_preview.py')+(sha(c['face_runtime'])+sum_face_code(Path(c['face_runtime']).parent)+sha(Path(c['face_runtime']).parent/'runtime.json') if s['face'] else '')).encode()).hexdigest()
   self.update(status='running',started=time.time(),stages=stages,error=None,completed_stages=0)
   try:
@@ -115,13 +115,46 @@ class Job:
     def stage_cmd(name):self.run_process([py,str(ROOT/'stages.py'),name,str(self.path),str(ROOT/'runtime.json')])
     if stage=='prepare':outputs=[self.path/'prepared'/f'{v}.png' for v in spec['views']];action=lambda:self.prepare(spec)
     elif stage=='shape':outputs=[self.path/'shape.glb',self.path/'shape_report.json'];action=lambda:stage_cmd('shape')
+    elif stage=='remesh':
+     outputs=[self.path/'shape.glb',self.path/'remesh_report.json']
+     action=lambda:self.run_process([py,str(ROOT/'stages.py'),'remesh',str(self.path),str(ROOT/'runtime.json')])
     elif stage=='uv':
      outputs=[self.path/'controls/uv_mesh.npz']+[self.path/'controls'/f'render_{kind}_multiview_{n}.png' for kind in ['normal','position'] for n in range(6)];action=lambda:stage_cmd('uv')
     elif stage=='paint':
      outputs=[self.path/'paint'/f'{kind}_{n}.png' for kind in ['albedo','mr'] for n in range(6)]
-     action=lambda:self.run_process([py,str(lab/'run_paint21.py'),'--input',str(self.path/'prepared/front.png'),'--controls',str(self.path/'controls'),'--output',str(self.path/'paint'),'--views','6','--resolution','512' if s['quality']=='fast' else '768'])
+     res='512' if s['quality']=='fast' else '768'
+     # Prefer multi-ref when enabled (default true if setting omitted and ?2 prepared views).
+     use_multiref=s['paint_multiref'] if 'paint_multiref' in s else (sum(1 for v in ('front','back','left','right') if (self.path/'prepared'/f'{v}.png').exists())>=2)
+     if use_multiref:
+      refs=[]
+      for v in ('front','back','left','right'):
+       rp=self.path/'prepared'/f'{v}.png'
+       if rp.exists():refs.append(str(rp))
+      if len(refs)<2:use_multiref=False
+     if use_multiref:
+      multiref=Path(c.get('paint_multiref_script',str(ROOT.parent/'quality_lab'/'run_paint_multiref.py')))
+      if not multiref.exists():multiref=lab/'run_paint_multiref.py'
+      cmd=[py,str(multiref),'--controls',str(self.path/'controls'),'--output',str(self.path/'paint'),'--views','6','--resolution',res,'--references',*refs]
+      action=lambda cmd=cmd:self.run_process(cmd)
+     else:
+      action=lambda:self.run_process([py,str(lab/'run_paint21.py'),'--input',str(self.path/'prepared/front.png'),'--controls',str(self.path/'controls'),'--output',str(self.path/'paint'),'--views','6','--resolution',res])
     elif stage=='bake':
-     outputs=[self.path/'textured_pbr.glb',self.path/'textured_color.glb'];action=lambda:self.run_process([py,str(lab/'bake_paint21.py'),'--input',str(self.path/'paint'),'--uv-cache',str(self.path/'controls/uv_mesh.npz'),'--output-prefix',str(self.path/'textured'),'--views','6','--resolution','512' if s['quality']=='fast' else '768'])
+     outputs=[self.path/'textured_pbr.glb',self.path/'textured_color.glb']
+     tex_sr=s.get('texture_sr','pil')
+     if tex_sr not in ('pil','realesrgan'):tex_sr='pil'
+     res='512' if s['quality']=='fast' else '768'
+     bake_cmd=[py,str(lab/'bake_paint21.py'),'--input',str(self.path/'paint'),'--uv-cache',str(self.path/'controls/uv_mesh.npz'),'--output-prefix',str(self.path/'textured'),'--views','6','--resolution',res,'--upscaler',tex_sr]
+     action=lambda bake_cmd=bake_cmd:self.run_process(bake_cmd)
+    elif stage=='hybrid_a3':
+     outputs=[self.path/'hybrid_a3/report.json',self.path/'textured_hybrid_a3_color.glb']
+     hybrid_script=Path(c.get('hybrid_a3_script',str(ROOT.parent/'quality_lab'/'project_hybrid_a3.py')))
+     if not hybrid_script.exists():hybrid_script=Path(lab)/'project_hybrid_a3.py'
+     vis=ROOT.parent/'_vis_export'/'texture_a3_hybrid'/self.path.name
+     # Zenko MR invariant: retain bake PBR metallicRoughness pixels (albedo-only hybrid). hybrid_a3 remains opt-in.
+     hybrid_cmd=[py,str(hybrid_script),'--job',str(self.path),'--out',str(self.path/'hybrid_a3'),'--vis',str(vis)]
+     source_pbr=self.path/'textured_pbr.glb'
+     if source_pbr.is_file():hybrid_cmd+=['--source-pbr',str(source_pbr)]
+     action=lambda hybrid_cmd=hybrid_cmd:self.run_process(hybrid_cmd)
     elif stage=='face':
      project={'source':str(self.path/'prepared/front.png'),'mesh':str(self.path/'textured_pbr.glb'),'uv':str(self.path/'controls/uv_mesh.npz'),'output':str(self.path/'face')};write_json(self.path/'face_project.json',project)
      outputs=[self.path/'face/report.json',self.path/'face/Face_1_0.glb'];action=lambda:self.run_process([py,c['face_runtime'],'--project',str(self.path/'face_project.json')])
