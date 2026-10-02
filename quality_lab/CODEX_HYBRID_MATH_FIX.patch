@@ -49,19 +49,21 @@
  
  
 -def run(job: Path, out_dir: Path, landmarks_path: Path | None, vis_dir: Path | None, atlas_size: int = 2048, atlas_path: Path | None = None, color_glb: Path | None = None, pbr_glb: Path | None = None, jaw_blend: bool = False, phase2b: bool = False, extra_render_azims: list[float] | None = None, no_face_micro: bool = False, source_pbr: Path | None = None, mr_atlas: Path | None = None, face_iso: bool = False) -> dict:
-+def run(job: Path, out_dir: Path, landmarks_path: Path | None, vis_dir: Path | None, atlas_size: int = 2048, atlas_path: Path | None = None, color_glb: Path | None = None, pbr_glb: Path | None = None, jaw_blend: bool = False, phase2b: bool = False, extra_render_azims: list[float] | None = None, no_face_micro: bool = False, source_pbr: Path | None = None, mr_atlas: Path | None = None, face_iso: bool = False, exclusive_face: bool = False, search_oblique: bool = False) -> dict:
++def run(job: Path, out_dir: Path, landmarks_path: Path | None, vis_dir: Path | None, atlas_size: int = 2048, atlas_path: Path | None = None, color_glb: Path | None = None, pbr_glb: Path | None = None, jaw_blend: bool = False, phase2b: bool = False, extra_render_azims: list[float] | None = None, no_face_micro: bool = False, source_pbr: Path | None = None, mr_atlas: Path | None = None, face_iso: bool = False, exclusive_face: bool = False, search_oblique: bool = False, best_source: bool = False) -> dict:
      job = job.resolve()
      out_dir.mkdir(parents=True, exist_ok=True)
      if vis_dir:
-@@ -1118,6 +1112,7 @@
+@@ -1118,6 +1112,9 @@
      start = time.monotonic()
  
      blend_sum = torch.zeros((atlas_size, atlas_size, 3), device="cuda")
 +    exclusive_front = None
++    best_color = torch.zeros_like(blend_sum) if best_source else None
++    best_weight = torch.zeros((atlas_size, atlas_size, 1), device="cuda") if best_source else None
      weight_sum = torch.zeros((atlas_size, atlas_size, 1), device="cuda")
  
      IOU_WARN = 0.72
-@@ -1141,18 +1136,23 @@
+@@ -1141,18 +1138,23 @@
              candidates = [0.0]
              elev = 0.0
  
@@ -85,7 +87,7 @@
              if iou0 > best_pre_iou:
                  best_pre_iou, best_az, best_target, best_rendered = iou0, az, target, rendered
  
-@@ -1162,6 +1162,7 @@
+@@ -1162,6 +1164,7 @@
  
          base_m = bbox_matrix(source_mask, target)
          matrix, iou, align_meta = refine_alignment(rgba, target, base_m, atlas_size)
@@ -93,7 +95,7 @@
          warped = warp_rgba(rgba, matrix, atlas_size)
  
          used_landmarks = False
-@@ -1307,6 +1308,12 @@
+@@ -1307,6 +1310,16 @@
          else:
              view_boost = 1.0 if name in ("front", "back") else 0.55
          weight = a * incidence * view_boost
@@ -103,12 +105,20 @@
 +            face_tex, _, _ = renderer.back_project(np.repeat(face_mask[:, :, None], 3, axis=2), elev, azim)
 +            gate = face_tex[:, :, :1].clamp(0, 1) * (a > .95) * (cos > .3)
 +            exclusive_front = (color, gate)
++        if best_source:
++            replace = weight > best_weight
++            best_color = torch.where(replace, color, best_color)
++            best_weight = torch.maximum(weight, best_weight)
          blend_sum += color * weight
          weight_sum += weight
  
-@@ -1341,6 +1348,10 @@
+@@ -1339,8 +1352,13 @@
+         aligned_preview[name] = (rgb, mask > 0, rendered)
+ 
      confidence = weight_sum.clamp(0, 1)
-     projected = blend_sum / weight_sum.clamp_min(1e-6)
+-    projected = blend_sum / weight_sum.clamp_min(1e-6)
++    projected = best_color if best_source else blend_sum / weight_sum.clamp_min(1e-6)
++    report["projection_mix"] = "best_source_same_confidence" if best_source else "weighted_average"
      mixed = torch.as_tensor(base, device="cuda") * (1 - confidence) + projected * confidence
 +    if exclusive_front is not None:
 +        front_color, face_gate = exclusive_front
