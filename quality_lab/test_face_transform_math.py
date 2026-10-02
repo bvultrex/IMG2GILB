@@ -1,9 +1,15 @@
 import unittest
 import cv2
 import numpy as np
-from face_transform_math import ecc_to_forward
+from face_transform_math import ecc_to_forward, face_feature_indices
 
 class ECCDirectionTest(unittest.TestCase):
+ def test_documented_feature_schema_excludes_contour(self):
+  ids=face_feature_indices(28)
+  self.assertEqual(ids,list(range(11,28)))
+  self.assertTrue({23,24,25,26,27}.issubset(ids))
+  self.assertTrue(set(ids).isdisjoint(range(11)))
+  self.assertEqual(face_feature_indices(5),list(range(5)))
  def test_known_translation_roundtrip(self):
   rng=np.random.default_rng(42)
   template=cv2.GaussianBlur(rng.random((160,160),dtype=np.float32),(0,0),3)

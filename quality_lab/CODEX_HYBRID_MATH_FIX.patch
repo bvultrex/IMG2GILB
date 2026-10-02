@@ -1,0 +1,46 @@
+--- a/quality_lab/project_hybrid_a3.py
++++ b/quality_lab/project_hybrid_a3.py
+@@ -18,6 +18,7 @@
+ import trimesh
+ from PIL import Image
+ from scipy.spatial import Delaunay
++from face_transform_math import ecc_to_forward, face_feature_indices
+ 
+ LAB = Path(__file__).resolve().parent
+ if LAB.name == "quality_lab":
+@@ -408,19 +409,8 @@
+         return meta
+     n = min(len(sk), len(dk))
+     sk, dk = sk[:n], dk[:n]
+-    # Prefer eye/nose/mouth subset when detector returns dense anime landmarks (>=17)
+-    # Typical anime-face-detector: 0-1 brow-ish, eyes clustered, nose, mouth around mid indices.
+-    if n >= 17:
+-        # Use a stable subset: approximate left-eye, right-eye, nose, mouth corners / chin-ish
+-        idxs = [0, 1, 2, 3, 4]  # first 5 are usually eyes+nose style in many packs
+-        # Also include mid and lower if present
+-        for extra in (11, 12, 16, 17, 23, 24, 26):
+-            if extra < n:
+-                idxs.append(extra)
+-        idxs = sorted(set(i for i in idxs if i < n))
+-        sk_use, dk_use = sk[idxs], dk[idxs]
+-    else:
+-        sk_use, dk_use = sk, dk
++    idxs = face_feature_indices(n)
++    sk_use, dk_use = sk[idxs], dk[idxs]
+     M, inliers = cv2.estimateAffinePartial2D(sk_use, dk_use, method=cv2.RANSAC, ransacReprojThreshold=5.0)
+     if M is None:
+         meta["reason"] = "estimate_failed"
+@@ -820,8 +810,12 @@
+         try:
+             criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 60, 1e-5)
+             cc, warp = cv2.findTransformECC(g2, g1, warp, cv2.MOTION_TRANSLATION, criteria, inputMask=m2, gaussFiltSize=5)
++            # ECC supplies template->input sampling coordinates. apply_face_local_warp
++            # uses warpAffine without WARP_INVERSE_MAP, so it needs input->template.
++            sampling_warp = warp.copy()
++            warp = ecc_to_forward(warp)
+             dx, dy = float(warp[0, 2]), float(warp[1, 2])
+-            ecc_meta = {"mode": "ecc_translation", "cc": float(cc), "dx": dx, "dy": dy}
++            ecc_meta = {"mode": "ecc_translation", "cc": float(cc), "dx": dx, "dy": dy, "sampling_warp": sampling_warp.tolist(), "direction": "input_to_template"}
+             meta["steps"].append(ecc_meta)
+             if cc >= 0.2 and abs(dx) <= 24 and abs(dy) <= 24:
+                 delta = warp
