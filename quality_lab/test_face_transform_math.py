@@ -1,9 +1,17 @@
 import unittest
 import cv2
 import numpy as np
-from face_transform_math import ecc_to_forward, face_feature_indices
+from face_transform_math import ecc_to_forward, face_feature_indices, blend_valid_face_interior
 
 class ECCDirectionTest(unittest.TestCase):
+ def test_near_opaque_interpolation_does_not_leave_old_features(self):
+  source=np.zeros((64,64,4),np.uint8);source[:,:,3]=254
+  candidate=source.copy();candidate[:,:,:3]=220;candidate[:,:,3]=253
+  source[0,:,3]=0;candidate[0,:,3]=0
+  result=blend_valid_face_interior(source,candidate)
+  np.testing.assert_array_equal(result[:,:,3],source[:,:,3])
+  np.testing.assert_array_equal(result[32,32,:3],[220,220,220])
+  np.testing.assert_array_equal(result[0,:,:3],source[0,:,:3])
  def test_documented_feature_schema_excludes_contour(self):
   ids=face_feature_indices(28)
   self.assertEqual(ids,list(range(11,28)))

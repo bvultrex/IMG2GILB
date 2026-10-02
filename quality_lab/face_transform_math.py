@@ -1,5 +1,14 @@
 """Explicit conversion between ECC sampling and forward image transforms."""
 import cv2
+import numpy as np
+
+def blend_valid_face_interior(image, candidate):
+    """Preserve coverage while accepting near-opaque interpolation (251..255)."""
+    valid=((image[:,:,3]>250)&(candidate[:,:,3]>250)).astype(np.uint8)
+    weight=np.clip(cv2.distanceTransform(valid,cv2.DIST_L2,5)/12.,0,1)[:,:,None]
+    result=image.copy()
+    result[:,:,:3]=np.clip(image[:,:,:3]*(1-weight)+candidate[:,:,:3]*weight,0,255).astype(np.uint8)
+    return result
 
 def face_feature_indices(count):
     # hysts/anime-face-detector assets/landmarks.jpg: 0..4 contour,

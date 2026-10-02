@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import cv2
 import project_hybrid_a3 as hybrid
+from face_transform_math import blend_valid_face_interior
 
 p=argparse.ArgumentParser();p.add_argument('--job',type=Path,required=True);p.add_argument('--interior',action='store_true');p.add_argument('--out',type=Path);p.add_argument('--exclusive-face',action='store_true');a=p.parse_args()
 job=a.job.resolve();out=a.out.resolve() if a.out else job/('codex_face_similarity_interior' if a.interior else 'codex_face_similarity');out.mkdir(parents=True,exist_ok=False)
@@ -22,10 +23,7 @@ if a.interior:
     original_warp=hybrid.apply_face_local_warp
     def interior_warp(image,*args,**kwargs):
         candidate=original_warp(image,*args,**kwargs)
-        valid=((image[:,:,3]>250)&(candidate[:,:,3]>250)).astype(np.uint8)
-        weight=np.clip(cv2.distanceTransform(valid,cv2.DIST_L2,5)/12.,0,1)[:,:,None]
-        result=image.copy()
-        result[:,:,:3]=np.clip(image[:,:,:3]*(1-weight)+candidate[:,:,:3]*weight,0,255).astype(np.uint8)
+        result=blend_valid_face_interior(image,candidate)
         assert np.array_equal(result[:,:,3],image[:,:,3])
         return result
     hybrid.apply_face_local_warp=interior_warp
