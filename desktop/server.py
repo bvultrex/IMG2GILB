@@ -1,5 +1,5 @@
 """Loopback-only desktop API. Standard-library server; no installation at startup."""
-import base64,io,json,math,mimetypes,os,re,secrets,sys,threading,time,uuid,zipfile
+import base64,io,json,math,mimetypes,os,re,secrets,subprocess,sys,threading,time,uuid,zipfile
 from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -41,6 +41,8 @@ class API(BaseHTTPRequestHandler):
   if path=='/':
    html=(ROOT/'web/index.html').read_text(encoding='utf-8').replace('__APP_TOKEN__',TOKEN).encode();self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8');self.send_header('Content-Length',str(len(html)));self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(html);return
   if path in ['/app.js','/style.css','/model-viewer.min.js']:return self.file(ROOT/'web'/path[1:])
+  if path=='/api/open_jobs':
+   subprocess.Popen(['explorer',str(JOBS)],creationflags=subprocess.CREATE_NO_WINDOW);return self.response(200,{'ok':True,'path':str(JOBS)})
   if path=='/api/config':return self.response(200,{'rigging':rig_available(),'rigging_reason':'Automatisches Rigging wird noch getestet.' if not rig_available() else 'Lokales automatisches Rigging','face':Path(CFG['face_runtime']).is_file(),'local':True})
   if path=='/api/jobs':
    states=[]
@@ -85,6 +87,15 @@ class API(BaseHTTPRequestHandler):
       if key in settings and not isinstance(settings[key],bool):raise ValueError('Ungültiger Schalter: '+key)
      if settings.get('rig',False) and not rig_available():raise ValueError('Automatisches Rigging ist noch nicht verfügbar.')
      s={'quality':quality,'triangles':triangles,'height_cm':height,'texture_size':res,'textures':settings.get('textures',True),'face':settings.get('face',False),'rig':settings.get('rig',False),'seed':42}
+     # Opt-in finalize lineage (default OFF). Not a Studio UI default.
+     fc=settings.get('finalize_candidate')
+     if fc not in (None, False, ''):
+      if not isinstance(fc,str) or not fc.strip():raise ValueError('finalize_candidate muss ein job-relativer Pfad sein.')
+      rel=fc.strip().replace('\\','/').lstrip('/')
+      if Path(rel).is_absolute() or '..' in Path(rel).parts:raise ValueError('finalize_candidate muss im Job-Ordner bleiben.')
+      s['finalize_candidate']=rel
+     fs=settings.get('face_source')
+     if isinstance(fs,str) and fs.strip():s['face_source']=fs.strip()
      if s['face'] and not s['textures']:raise ValueError('Gesichtsdetails erfordern Texturen.')
      decoded={}
      Image.MAX_IMAGE_PIXELS=30_000_000
@@ -100,12 +111,20 @@ class API(BaseHTTPRequestHandler):
      spec={'schema':1,'views':list(decoded),'settings':s,'input_hashes':{name:sha(job/'inputs'/f'{name}.png') for name in decoded}}
      write_json(job/'project.json',spec);write_json(job/'state.json',{'id':jid,'status':'queued','created':time.time(),'settings':s,'views':list(decoded),'stage':None,'completed_stages':0,'stages':[]})
      ACTIVE=Job(job,CFG);THREAD=threading.Thread(target=ACTIVE.run,daemon=True);THREAD.start();return self.response(202,ACTIVE.snapshot())
-    m=re.fullmatch(r'/api/jobs/([a-f0-9]{32})/(cancel|retry)',path)
+    m=re.fullmatch(r'/api/jobs/([a-f0-9]{32})/(cancel|retry|reveal)',path)
     if m:
      jid,action=m.groups();job=JOBS/jid
      if action=='cancel':
       if not busy or ACTIVE.path.name!=jid:return self.response(409,{'error':'Dieses Projekt läuft nicht.'})
       ACTIVE.stop.set();ACTIVE.update(detail='Abbruch angefordert');return self.response(202,ACTIVE.snapshot())
+     if action=='reveal':
+      if not (job/'state.json').is_file():return self.response(404,{'error':'Projekt nicht gefunden'})
+      focus=job/'output.glb'
+      if focus.is_file():
+       subprocess.Popen(['explorer','/select,',str(focus)],creationflags=subprocess.CREATE_NO_WINDOW)
+      else:
+       subprocess.Popen(['explorer',str(job)],creationflags=subprocess.CREATE_NO_WINDOW)
+      return self.response(200,{'ok':True,'path':str(job)})
      if busy:return self.response(409,{'error':'Noch ein laufendes Projekt'})
      if not (job/'state.json').is_file():return self.response(404,{'error':'Projekt nicht gefunden'})
      state=json.loads((job/'state.json').read_text())
