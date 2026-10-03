@@ -15,6 +15,7 @@ p.add_argument('--pbr', action='store_true', help='Keep imported material; rende
 p.add_argument('--clay', action='store_true', help='Replace materials transiently to isolate geometry defects')
 p.add_argument('--angles', type=float, nargs='+', default=[0], help='Azimuths in degrees; zero is front')
 p.add_argument('--resolution', type=int, default=640)
+p.add_argument('--highlight-pairs',type=Path,help='Matching Blender BVH report; transient red face overlay')
 a = p.parse_args(sys.argv[sys.argv.index('--') + 1:])
 if a.clay and a.pbr:
     p.error('--clay and --pbr are mutually exclusive')
@@ -48,6 +49,20 @@ if a.clay:
     for obj in meshes:
         obj.data.materials.clear()
         obj.data.materials.append(clay)
+if a.highlight_pairs:
+    assert a.clay and len(meshes)==1
+    pair_report=json.loads(a.highlight_pairs.read_text(encoding='utf-8'))
+    assert pair_report['source_sha256']==source_hash
+    obj=meshes[0]
+    assert all(len(p.vertices)==3 for p in obj.data.polygons)
+    assert len(obj.data.polygons)==pair_report['triangles']
+    marked={i for pair in pair_report['disjoint_pairs'] for i in pair}
+    red=bpy.data.materials.new('IntersectionOverlay');red.use_nodes=True
+    shader=red.node_tree.nodes.get('Principled BSDF')
+    shader.inputs['Base Color'].default_value=(1,.005,.005,1)
+    obj.data.materials.append(red)
+    for i in marked:obj.data.polygons[i].material_index=1
+    report['highlighted_faces']=len(marked)
 # Link imported base-color input to emission, only in this transient Blender scene.
 for mat in ([] if a.pbr or a.clay else bpy.data.materials):
     if not mat.use_nodes:

@@ -164,3 +164,6 @@ Front-only front/+35clay inspected: still two roughly symmetric large eye socket
 
 ## Existing TRELLIS evidence reviewed before rerun
 Inspected previous direct1024 and detail-conditioning clay face renders plus exact preprocessed front image. Input visibly retains one-large/two-small lens layout; both whole-object variants still produce two large sockets. Direct output has numerous jagged/open-looking artifacts; remesh512 detail arm smoother but wrong layout persists. Existing logs confirm completed TRELLIS.2-4B outputs (~10Mrawfaces,5.7GiB reported peak), so do not reinstall or blindly repeat. Source extractor uses requested resolution (no evident fixed224 downsample); whole-object small-detail loss remains. Existing head-probe render also inspected to assess crop path before any new generation. Front-only Hunyuan Blender42367 now confirmed terminal success. No process active.
+
+## Independent head-probe review 2026-10-03
+Blender10113 completed; front and +35 full-bounds clay inspected. Three-lens asymmetry is retained by the existing head-only TRELLIS reconstruction. Earlier cropped face render is not a valid rejection. See CODEX_LOCAL_DETAIL_REVIEW_2026-10-03.md for source hash, remaining defects, existing v5 seam failures and next work package. User grants temporary full ownership; baseline/default gates remain. No GPU job active.

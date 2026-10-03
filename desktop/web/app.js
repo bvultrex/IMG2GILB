@@ -32,3 +32,53 @@ setInterval(()=>refreshHistory().catch(()=>{}),10000);
 
 $('walkPreview').onclick=async()=>{showWalk=!showWalk;$('preview').autoplay=showWalk;$('walkPreview').textContent=showWalk?'Laufprobe stoppen':'Laufprobe starten';render(await api(`/api/jobs/${current}`))};
 $('preview').addEventListener('load',()=>{if(showWalk)$('preview').play()});
+
+
+// --- interim studio helpers (Grok 2026-09-28) ---
+(function(){
+  const g = id => document.getElementById(id);
+  const preset = g('presetCharacter');
+  if (preset) preset.onclick = () => {
+    g('quality').value = 'standard';
+    g('triangles').value = 100000;
+    g('height').value = 170;
+    g('resolution').value = 2048;
+    g('textures').checked = true;
+    g('face').checked = true;
+    g('textures').onchange();
+    storeDraft();
+    g('draftStatus').textContent = 'Preset Charakter Standard geladen.';
+  };
+  const loadBtn = g('loadFolder');
+  const picker = g('folderPicker');
+  if (loadBtn && picker) {
+    loadBtn.onclick = () => picker.click();
+    picker.onchange = () => {
+      const list = [...picker.files];
+      const map = {front:null, back:null, left:null, right:null};
+      for (const f of list) {
+        const n = f.name.toLowerCase();
+        if (/front|vorn/.test(n)) map.front = f;
+        else if (/back|hinten|rear/.test(n)) map.back = f;
+        else if (/left|links|side_a/.test(n)) map.left = f;
+        else if (/right|rechts|side_b/.test(n)) map.right = f;
+      }
+      let loaded = 0;
+      for (const [k, f] of Object.entries(map)) if (f) { setReference(k, f); loaded++; }
+      storeDraft();
+      if (!map.front) error('Ordner braucht mindestens front.png (oder Namen mit front/vorn).');
+      else { g('draftStatus').textContent = loaded + ' Ansicht(en) aus Ordner geladen.'; error(''); }
+    };
+  }
+  const openFolder = g('openFolder');
+  if (openFolder) openFolder.onclick = async () => {
+    try {
+      if (!current) throw Error('Kein Projekt gewaehlt.');
+      await api('/api/jobs/' + current + '/reveal', {});
+    } catch (e) { error(e.message); }
+  };
+  const openJobs = g('openJobsRoot');
+  if (openJobs) openJobs.onclick = async () => {
+    try { await api('/api/open_jobs'); } catch (e) { error(e.message); }
+  };
+})();

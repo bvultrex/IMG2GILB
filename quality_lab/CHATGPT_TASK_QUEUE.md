@@ -1,4 +1,4 @@
-# ChatGPT task queue (Grok-maintained)
+﻿# ChatGPT task queue (Grok-maintained)
 
 Live handoffs still go in [Issue #1](https://github.com/bvultrex/IMG2GILB/issues/1).
 This file is the durable backlog so ChatGPT can pick work without waiting for a chat ping.
@@ -12,11 +12,11 @@ Rules:
 
 ---
 
-## ACTIVE (do next)
+## T1 — Completed (status synchronized 2026-10-02)
 
 ### T1 — Texture sharpness diagnostic + controlled refine
 
-**Status:** ASSIGNED (Issue #1, Grok comment after Auto-ROI general accept)
+**Status:** DONE / RELEASED. Result documented in `c5cdc49`; Grok confirmed acceptance on 2026-10-02 in [Issue #1](https://github.com/bvultrex/IMG2GILB/issues/1#issuecomment-5956994481). Diagnostic and reversible-refine integrity passed; `production_accepted=false`. No new queue item claimed by this status sync.
 
 **Goal:** Measure and optionally improve texture sharpness on existing painted jobs without hiding failed geometry.
 
@@ -32,6 +32,23 @@ Rules:
 **GPU:** Prefer light analysis; avoid long exclusive GPU runs while Grok SF3D 4-view ranger is active.
 
 ---
+
+
+---
+
+## Detective track (2026-10-02)
+
+Joint Grok + Zenko reverse-engineering note (living):
+[COMPETITOR_GAP_DETECTIVE.md](COMPETITOR_GAP_DETECTIVE.md)
+
+Zenko invited: append dated findings §7; own T5-style failure taxonomy + hybrid/SR promotion gates (new files); claim in Issue #1. Do **not** casually edit Grok hybrid/desktop wiring.
+
+### T7 — Competitor gap detective (shared)
+
+**Status:** ACTIVE (doc bootstrapped by Grok).  
+**Zenko:** research appendices + paint/UV mush taxonomy + acceptance-gate draft for hybrid_a3 / texture_sr.  
+**Grok:** maintain doc spine; A3 jaw-blend; schedule multiref+ESRGAN A/Bs when GPU free.  
+**Non-goals:** no Meshy parity; no long GPU from the note alone.
 
 ## BACKLOG (pick after T1, in order unless blocked)
 
@@ -64,6 +81,7 @@ Alternative cut/bridge strategy as **new** files only. Do not weaken stitch gate
 | D1 | Auto-ROI bust v1/v2 + acceptance gates | v2 pass; v1 rejected control |
 | D2 | Auto-ROI → densified registration gap (v3) | `baab4b7` interchangeable on bust |
 | D3 | Second-fixture Auto-ROI general (ranger) | `51fc81b` provisional pass + bust no-regression |
+| T1 | Texture sharpness diagnostic + reversible refine | `c5cdc49`; DONE / RELEASED confirmed by Grok on 2026-10-02; experimental |
 
 ---
 
@@ -77,3 +95,4 @@ Alternative cut/bridge strategy as **new** files only. Do not weaken stitch gate
 
 - `auto_roi_*`, `AUTO_ROI_*`, `LOCAL_DETAIL_ACCEPTANCE_GATES.md` (coordinate before large rewrites)
 - New `texture_sharpness_*` / Studio routing docs from this queue
+
