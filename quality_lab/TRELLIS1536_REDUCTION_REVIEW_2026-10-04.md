@@ -1,0 +1,39 @@
+# TRELLIS 1536 reduction controls
+
+Both controls completed; no jobs from this package remain running. Original PLY/GLB unchanged. No production/default changes.
+
+## Direct QEM: rejected
+
+Source PLY SHA f9bcace89c4fff1a856d6a76f78704f17b863876cc07745170b2a68470df5cac. Runner codex_reduce_highres.py; 511.84 seconds; 24,865,502 -> 100,000 triangles / 55,254 vertices. Output ../quality_runs/trellis1536_reduce100k_v2/candidate.glb SHA 24cab8dd667df3d198f1b7203ba2ca9cfe92b34edd3ab7b44c830dcd9635db74.
+
+Independent Blender renders at 0/35/180 visibly fail with shredded surfaces. Blender imports 96,617 triangles: independently counted exactly 3,383 unordered duplicate triangles, zero repeated-index/zero-area triangles. A separate deduplicated export imports the expected 96,617 but remains visibly damaged; duplicate removal is not a surface fix. Topology before dedup: 34,234 positional boundary edges / 10,091 nonmanifold edges. This invalid raw-mesh reduction cannot determine a useful detail-versus-triangle-budget curve.
+
+## Blender voxel768 then reduction: rejected
+
+Same original GLB, SHA 5b747371d50fd74f9e8e864642115209eda48601b2faa449d59530c70b2b84ae. Runner codex_blender_voxel_probe.py; 0.520833mm voxel size, 98.47 seconds; 1,897,016 remeshed triangles, 74,160 exported after nominal 100k reduction. Source hash unchanged. Output ../quality_runs/trellis1536_voxel768/candidate.glb SHA ddefd004ea6c4fa822c536e4f74d46d0aeac0c1df1a7c0e98d39947dbc54e303. Independent Blender imports 74,149. Topology: 77,133 positional boundary edges, 234 nonmanifold edges. Front/rear renders lose broad hood/armor/pedestal surfaces. No acceptance, no cleanup of tiny fragments as substitute for missing surfaces. Before/after-remesh isolation remains needed to assign which stage removes each surface.
+
+## Diagnosis boundary and next decision
+
+Confirmed: raw 1536 already has open/incomplete rear surfaces; generic QEM and Blender volume remeshing do not make a usable reduced model. Not established: exact decoder defect, whether all visible holes originate at extraction, or whether a different model prior is necessary.
+
+Code inspection found shape-only runner calls decode_shape_slat and directly exports, while installed trellis2_image_to_3d.py decode_latent calls m.fill_holes before constructing MeshWithVoxel. This missing step is a real pipeline difference, not proof it solves large openings: default max_hole_perimeter=0.03 in native coordinates. Historical official no-remesh control on a different head fixture failed; do not claim that already tests this whole-bust 1536 source.
+
+Next consequential test: reproduce the upstream whole-bust surface export (native-unit hole handling and narrow-band CuMesh remesh, preserving an unmodified control) from existing latent/geometry, with intermediate topology and matched renders. Do not resample a new character or texture the failed reduced outputs. Normal maps cannot repair missing surfaces or the wrong two-lens arrangement. Only a successful surface export should proceed to UV/texture and second-fixture integration.
+
+## Native export control started
+Runner codex_fullbust_native_remesh.py, session 66767, Python worker PID 3076 (launcher 22600). Output ../quality_runs/trellis1536_native_remesh. Saved latent SHA 18df5feeceae68bd45ec60f618dd19c60a707d79105a2108ef21f865a4d39d50. Existing decoder eval/low_vram only; no new diffusion. Sequence: native decode, fill(.03), preserve filled.ply, narrow-band DC1536 band1/project0, preserve remeshed.ply, simplify100k, export/audit. At checkpoint decoder still computing, GPU100% ~18.8GB; no result/quality claim yet. Do not duplicate this run. Blender audit gained Y-up diagnostic PLY import to inspect intermediate surfaces. Read report and processes before next action; independent renders still pending.
+
+## Native control completed and independently rendered
+591s total; native fill 24,865,502 ->25,113,556 triangles; narrow-band remesh1536 ->47,462,152; simplify ->98,008. Saved intermediates filled.ply/remeshed.ply. Latent unchanged. Candidate SHA4361ef3b91c836099d08c2776f1f5b4654b22b12edd23d2cdcec0de786a1c8c6. Blender imports96,693 triangles, source unchanged, 0/+35/180 renders complete. Front far more coherent than direct QEM but hose ribs lost, lens arrangement still wrong, visible openings remain. Positional boundary0 does NOT mean valid surface:3396 nonmanifold edges. Production REJECT. Next inspect filled versus remeshed intermediates before blaming simplification for detail loss. No active job from this package.
+
+## Stage isolation and budget control
+Independent Blender filled.ply front/rear completed (25,113,556 triangles, SHA5af9a5aaf424049107a2dbc84b3d969679c4d3d91c254b3ea633a2c45c854a98), remeshed.ply front completed (47,462,152 triangles, SHA28d5621f1282bb9cd4552c806f4df9972c9bc1c365aae3544ad811218ba38cc1). Both source hashes unchanged; hose ribs visible before and after remeshing. Strong loss therefore localized to simplification in this arm, not initial fill/remesh. Existing holes remain separate. Same saved remesh reduced with500k target via native-coordinate reconstruction:477,932 triangles produced; independent render pending at checkpoint. No new generation. Upstream research: https://github.com/microsoft/TRELLIS.2/issues/105 reports related broken geometry without remesh, but gives no validated fix; treat as corroborating user report only, not causal proof.
+
+500k control terminal: candidate SHA805b0bc89fb50056b5f8a54afd623a9e781f549b65fab171a987c38337876f11; Blender imports476,270 triangles vs477,932 stored (discrepancy remains). Front reviewed: hose ribs return and pedestal detail improves vs100k. Not production: preexisting openings and wrong lens layout persist. This supports retaining higher detail through the intermediate mesh and testing detail baking later; it does not establish Quest performance or clean topology. All sessions terminal. Next prioritize topology/export validity and missing rear structure, not another undirected model sweep.
+
+## Export sanitation control
+500k GLB has1662 duplicate and106 exact zero-area triangles. Naive trimesh export changed4078 used normals and was rejected (budget500k_clean). New codex_export_surface_cleanup.py edits only GLB index data/count; all non-index binary bytes unchanged, retained positions/faces exact. budget500k_index_clean has476164 triangles, SHA caf77eef57d080c215cbb989a11c07ec66cd47da56acc92d96de6126cb9ad38c. Positional nonmanifold3803 and boundary2002 remain; previous boundary0 was not valid-solid evidence. Not a geometry repair or production pass. This control removes ambiguity from future viewer counts without altering source appearance intentionally.
+
+## Large-stage indexed topology and research
+Executed codex_large_ply_topology.py on unchanged saved PLY stages: filled25,113,556faces has671,967 indexed boundary edges and623,248 nonmanifold edges; remeshed47,462,152faces has0 indexed boundaries and39,166 nonmanifold edges(max incidence4). Thus invalid incidence precedes simplification. These are indexed counts, not self-intersection/positional validity certificates.
+Inspected installed CuMesh simplify: only thresh/lambda_edge_length/lambda_skinny options in Python wrapper, no exposed topology-preservation switch. Researched https://github.com/Quentincls/localmesh-engine and cloned SOURCE ONLY to sibling localmesh-source-audit at c30fb47f8a57f1c68650697a7b99bc2c2399be23. No install/execution. Its tile-owner fix is NOT applicable to our current fdg_vae.py call path: ours imports non-tiled flexible_dual_grid_to_mesh. Do not apply a speculative tiled patch or claim root cause. Its documented four-view path uses Pixal3D trained fusion, a distinct model path, not averaging TRELLIS image conditions. Source/weights/VRAM feasibility audit is appropriate before an isolated multiview trial; no quality claims from README alone.

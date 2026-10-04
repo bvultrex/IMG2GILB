@@ -1,0 +1,336 @@
+{
+  "controls": [
+    {
+      "name": "synthetic_identity",
+      "pass": true,
+      "full_mae": 0.017426490783691406,
+      "full_maxabs": 1.0,
+      "interior_mae": 0.0,
+      "alpha_mae": 0.026584625244140625,
+      "roi": [
+        80,
+        60,
+        340,
+        340
+      ],
+      "delta": [
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      "expect": "identity warp must leave RGBA unchanged (image+mask share transform; blend of identical = id)"
+    },
+    {
+      "name": "synthetic_known_translation",
+      "pass": false,
+      "dx": 16.0,
+      "dy": -12.0,
+      "roi": [
+        80,
+        60,
+        340,
+        340
+      ],
+      "interior_vs_full_mae": 0.1862490028142929,
+      "outside_mae": 0.9083297848701477,
+      "alpha_interior_mae": 0.0,
+      "markers": {
+        "blue": {
+          "src": [
+            200,
+            300
+          ],
+          "expected": [
+            216,
+            288
+          ],
+          "observed_peak": [
+            216,
+            276
+          ],
+          "err_px": 12.0
+        }
+      },
+      "expect": "inside ROI matches full warpAffine(delta); outside equals original; alpha same delta as RGB"
+    },
+    {
+      "name": "tx_extract_from_scaled_similarity",
+      "pass": true,
+      "true_scale": 1.09,
+      "true_center_shift": [
+        5.0,
+        8.0
+      ],
+      "estimated_scale": 1.0900000333786013,
+      "estimated_tx_ty": [
+        -18.040014266967773,
+        -15.040005683898926
+      ],
+      "center_to_center_dx_dy": [
+        -4.5400238037109375,
+        -0.339996337890625
+      ],
+      "median_err_full_affine_px": 3.814697265625e-06,
+      "median_err_stripped_translation_px": 20.558021545410156,
+      "fixed_extract": {
+        "dx_dy": [
+          -4.540008544921875,
+          -0.6400070190429688
+        ],
+        "err_vs_center_px": 0.300010681540381,
+        "err_vs_stripped_px": 19.73854391902111,
+        "meta": {
+          "mode": "face_iso_extract_micro_delta",
+          "scale": 1.0900000333786013,
+          "raw_tx": -18.040014266967773,
+          "raw_ty": -15.040005683898926,
+          "rot_small": true,
+          "bbox_center_dx": -4.540008544921875,
+          "bbox_center_dy": -0.6400070190429688,
+          "face_center_dx": -4.540008544921875,
+          "face_center_dy": -0.6400070190429688,
+          "path": "prefer_center_not_raw_tx",
+          "chosen": "face_iso_face_center_vs_scaled_sim",
+          "dx": -4.540008544921875,
+          "dy": -0.6400070190429688,
+          "clamp_scale": 1.0
+        }
+      },
+      "note": "OLD path stripped M[:,2] (FAIL). NEW face_iso_extract_micro_delta uses face/bbox center when scale!=1 (PASS)."
+    },
+    {
+      "name": "front_aligned_identity",
+      "pass": true,
+      "full_mae": 9.846687316894531e-05,
+      "full_maxabs": 1.0,
+      "interior_mae": 0.0,
+      "alpha_mae": 0.00010395050048828125,
+      "roi": [
+        905,
+        206,
+        1152,
+        468
+      ],
+      "delta": [
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      "expect": "identity warp must leave RGBA unchanged (image+mask share transform; blend of identical = id)"
+    },
+    {
+      "name": "front_aligned_known_translation",
+      "pass": true,
+      "dx": 16.0,
+      "dy": 0.0,
+      "roi": [
+        905,
+        206,
+        1152,
+        468
+      ],
+      "interior_vs_full_mae": 0.0,
+      "outside_mae": 0.0008108601323328912,
+      "alpha_interior_mae": 0.0,
+      "markers": {},
+      "expect": "inside ROI matches full warpAffine(delta); outside equals original; alpha same delta as RGB"
+    }
+  ],
+  "failed_run": {
+    "chosen": "face_iso_landmark_translation_clamped",
+    "clamp_scale": 0.7367637185801715,
+    "landmark_dx_dy": [
+      -65.14979132231262,
+      -64.5323211666238
+    ],
+    "applied_delta_dx_dy": [
+      -48.00000251934924,
+      -47.545072911331665
+    ],
+    "landmark_scale": 1.0936039591940163,
+    "project_face": true,
+    "weight_map": "face_iso_project",
+    "roi": [
+      905,
+      206,
+      1152,
+      468
+    ],
+    "weight_roi": [
+      905,
+      206,
+      1152,
+      468
+    ],
+    "face_center_step": {
+      "mode": "face_center_translation",
+      "dx": 17.00225830078125,
+      "dy": 28.080352783203125,
+      "src_bbox": [
+        928.1322021484375,
+        220.6347198486328,
+        1095.677978515625,
+        398.471435546875
+      ],
+      "dst_bbox": [
+        933.4462890625,
+        234.61819458007812,
+        1124.368408203125,
+        440.6486511230469
+      ]
+    },
+    "iou_before_after": [
+      0.9119492479083238,
+      0.8946350480729821
+    ],
+    "live_recompute": {
+      "recomputed_landmark_quality": {
+        "mode": "face_landmark_quality",
+        "ok": false,
+        "src": true,
+        "dst": true,
+        "residual_median_px": 1.3709559791338473,
+        "residual_p90_px": 3.1619947207092776,
+        "dx": -15.19888703659626,
+        "dy": -1.9806990555481576,
+        "center_dx": 32.75335693359375,
+        "center_dy": 38.990936279296875,
+        "gate_dx": 32.75335693359375,
+        "gate_dy": 38.990936279296875,
+        "scale": 1.10598840087724,
+        "inliers": 11,
+        "n_kps": 12,
+        "reason": "gate_fail",
+        "src_bbox": [
+          439.3074645996094,
+          85.91101837158203,
+          524.5675048828125,
+          175.82522583007812
+        ],
+        "dst_bbox": [
+          464.7833251953125,
+          114.93360900878906,
+          564.598388671875,
+          224.7845001220703
+        ]
+      },
+      "recomputed_face_center": {
+        "mode": "face_center_translation",
+        "dx": 32.75335693359375,
+        "dy": 38.990936279296875,
+        "src_bbox": [
+          439.3074645996094,
+          85.91101837158203,
+          524.5675048828125,
+          175.82522583007812
+        ],
+        "dst_bbox": [
+          464.7833251953125,
+          114.93360900878906,
+          564.598388671875,
+          224.7845001220703
+        ]
+      },
+      "face_center_M": [
+        [
+          1.0,
+          0.0,
+          32.75335693359375
+        ],
+        [
+          0.0,
+          1.0,
+          38.990936279296875
+        ]
+      ],
+      "affine_scale": 1.1059883797701258,
+      "affine_rot_approx": [
+        -0.03967326134443283,
+        0.03967326134443283
+      ],
+      "affine_tx_ty": [
+        -15.19888687133789,
+        -1.980699062347412
+      ],
+      "bbox_center_delta": [
+        32.75337219238281,
+        38.99093246459961
+      ],
+      "naive_scale_induced_tx_ty_about_origin": [
+        -51.07977315821066,
+        -13.870500225025967
+      ],
+      "center_delta_minus_scale_induced": [
+        35.880886286872766,
+        11.889801162678555
+      ]
+    },
+    "hypothesis": "Landmark partial-affine scale~1.09 produces large tx/ty; face_iso strips to translation and clamps to 48px, shifting face up-left into hair and pulling cyan collar into cheek via apply_face_local_warp ROI blend (warped interior + unwarped exterior = ghost fragments)."
+  },
+  "replay_failed_delta": {
+    "dx": -48.00000251934924,
+    "dy": -47.545072911331665,
+    "artifact": "D:\\SF3D_QualityLab\\app_jobs\\5e81ac7963f84af2a403fb659cea7513\\quality_jump_face_iso\\controls\\sbs_replay_failed_delta_face.png"
+  },
+  "mechanical_warp_pass": false,
+  "tx_extract_control": {
+    "name": "tx_extract_from_scaled_similarity",
+    "pass": true,
+    "true_scale": 1.09,
+    "true_center_shift": [
+      5.0,
+      8.0
+    ],
+    "estimated_scale": 1.0900000333786013,
+    "estimated_tx_ty": [
+      -18.040014266967773,
+      -15.040005683898926
+    ],
+    "center_to_center_dx_dy": [
+      -4.5400238037109375,
+      -0.339996337890625
+    ],
+    "median_err_full_affine_px": 3.814697265625e-06,
+    "median_err_stripped_translation_px": 20.558021545410156,
+    "fixed_extract": {
+      "dx_dy": [
+        -4.540008544921875,
+        -0.6400070190429688
+      ],
+      "err_vs_center_px": 0.300010681540381,
+      "err_vs_stripped_px": 19.73854391902111,
+      "meta": {
+        "mode": "face_iso_extract_micro_delta",
+        "scale": 1.0900000333786013,
+        "raw_tx": -18.040014266967773,
+        "raw_ty": -15.040005683898926,
+        "rot_small": true,
+        "bbox_center_dx": -4.540008544921875,
+        "bbox_center_dy": -0.6400070190429688,
+        "face_center_dx": -4.540008544921875,
+        "face_center_dy": -0.6400070190429688,
+        "path": "prefer_center_not_raw_tx",
+        "chosen": "face_iso_face_center_vs_scaled_sim",
+        "dx": -4.540008544921875,
+        "dy": -0.6400070190429688,
+        "clamp_scale": 1.0
+      }
+    },
+    "note": "OLD path stripped M[:,2] (FAIL). NEW face_iso_extract_micro_delta uses face/bbox center when scale!=1 (PASS)."
+  },
+  "verdict": "MECHANICAL_WARP_FAIL"
+}

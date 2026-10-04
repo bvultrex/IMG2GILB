@@ -15,6 +15,7 @@ p.add_argument('--pbr', action='store_true', help='Keep imported material; rende
 p.add_argument('--clay', action='store_true', help='Replace materials transiently to isolate geometry defects')
 p.add_argument('--angles', type=float, nargs='+', default=[0], help='Azimuths in degrees; zero is front')
 p.add_argument('--resolution', type=int, default=640)
+p.add_argument('--ply-up', choices=['y', 'z'], default='y', help='Declared PLY vertical axis')
 p.add_argument('--highlight-pairs',type=Path,help='Matching Blender BVH report; transient red face overlay')
 a = p.parse_args(sys.argv[sys.argv.index('--') + 1:])
 if a.clay and a.pbr:
@@ -24,7 +25,16 @@ a.out = a.out.resolve()
 a.out.mkdir(parents=True, exist_ok=True)
 source_hash = hashlib.sha256(a.model.read_bytes()).hexdigest()
 bpy.ops.wm.read_factory_settings(use_empty=True)
-bpy.ops.import_scene.gltf(filepath=str(a.model))
+if a.model.suffix.lower() == '.ply':
+    assert a.clay, 'PLY diagnostic supports clay only'
+    bpy.ops.wm.ply_import(filepath=str(a.model))
+    # Diagnostic PLYs share glTF Y-up coordinates; Blender is Z-up.
+    for obj in bpy.context.selected_objects:
+        if a.ply_up == 'y':
+            obj.rotation_euler.x = math.pi / 2
+    bpy.context.view_layer.update()
+else:
+    bpy.ops.import_scene.gltf(filepath=str(a.model))
 meshes = [o for o in bpy.context.scene.objects if o.type == 'MESH']
 assert meshes, 'No imported mesh'
 points = [o.matrix_world @ Vector(c) for o in meshes for c in o.bound_box]
@@ -39,7 +49,8 @@ report = {'source_sha256': source_hash, 'blender': bpy.app.version_string,
           'mesh_count': len(meshes), 'vertices': sum(len(o.data.vertices) for o in meshes),
           'triangles': sum(len(p.vertices)-2 for o in meshes for p in o.data.polygons),
           'extents_m': list(hi-lo), 'images': images,
-          'scope': 'Independent GLB import and '+('clay geometry render' if a.clay else 'PBR studio-light render' if a.pbr else 'base-color emission render')+'; Studio UI not covered'}
+          'source_format': a.model.suffix.lower(), 'ply_up': a.ply_up if a.model.suffix.lower() == '.ply' else None,
+          'scope': 'Independent mesh import and '+('clay geometry render' if a.clay else 'PBR studio-light render' if a.pbr else 'base-color emission render')+'; Studio UI not covered'}
 if a.clay:
     clay = bpy.data.materials.new('AuditClay')
     clay.use_nodes = True

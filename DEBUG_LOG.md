@@ -108,3 +108,26 @@ Alpha-consistent interior candidate verified front and ±35 Blender views: no do
 2026-10-03 Orientation audit rejects previous127face arm(21flips). Guarded iterative run achieves168remaining,zero flips/degenerate/edge defects,totalcap0.25mm,rollback on plateau. Experimental only.
 
 2026-10-03 Upstreamgeometrycontrol launched from savedlatent. First isolateddecode failed because decoder remained trainingmode; fixed explicit.eval() (normalpipeline does this). Firstsession29830terminal. Newsession28964 confirmedlive, outputheadprobe_native_standard_eval. No newdiffusion/install. Must inspect samehandle before restart.
+`n2026-10-04: Completed TRELLIS1536 direct QEM and Blender voxel768 reduction controls. Both independently rendered and rejected. 3383 duplicate triangles explain direct-export Blender count discrepancy; dedup does not fix visual damage. Originals unchanged, no active run from package. See quality_lab/TRELLIS1536_REDUCTION_REVIEW_2026-10-04.md. Next: upstream native-unit whole-bust surface export control before UV/texturing.
+
+2026-10-04: Native whole-bust export control running from saved latent; session66767/PID3076. No new sampling; no baseline edits. See TRELLIS1536_REDUCTION_REVIEW_2026-10-04.md for live checkpoint.
+
+2026-10-04: Native1536 export completed; independent Blender views complete. Better coherent surface than QEM, but lost hose detail, visible defects,3396 positional nonmanifold edges. Not accepted. See TRELLIS1536_REDUCTION_REVIEW_2026-10-04.md.
+
+2026-10-04: Stage isolation complete. Fill/remesh retain hose ribs;100k simplification loses them.500k control recovers visible ribs, independently Blender-rendered. Existing holes/lens errors remain, no production acceptance. See TRELLIS1536_REDUCTION_REVIEW_2026-10-04.md.
+
+2026-10-04: Index-only GLB sanitation verified by independent Blender:476164 stored/imported triangles match, source unchanged.1662 duplicates+106 exact zero-area faces removed. Remaining topology defects not fixed; experimental only.
+
+2026-10-04: Full-stage indexed topology audit confirms nonmanifold edges before simplification. Rejected tiled-extractor fix as inapplicable to active non-tiled path. LocalMesh source-only audit opened for trained Pixal3D multiview feasibility; no runtime changes.
+
+2026-10-04 Codex: isolated cp312 torch2.8 multiview runtime installed; checksum-verified NATTEN wheel imports but actual CUTLASS CUDA smoke fails on RTX A4500 SM86 (no kernel image). No model inference/quality gain claimed. See PIXAL3D_MULTIVIEW_PREFLIGHT_2026-10-04.md and codex_natten_smoke.py. Next: SM86-specific build using existing toolkit, then repeat same smoke.
+
+2026-10-04 Codex: NATTEN GPU blocker resolved with existing visualbruno Torch280 wheel. CUTLASS-FNA real GPU smoke passes on A4500 at dilation1/2/4. Isolated LocalMesh dependencies and SHA-verified MV weights being installed; production remains unchanged. Model inference still pending.
+
+2026-10-04 Codex: isolated MV dependency installation and verified weight downloads completed. Real offline Ranger DINO+NAF conditioning passes (10.13s). Existing FP16 sparse/shape decoder strict state_dict audits pass with zero meta leftovers; decoder forward and full MV generation pending. Reports under IMG2GILB-multiview-runtime; no production changes.
+
+2026-10-04 Codex: first trained MV geometry trial running (session55393); four-view encodings and structure/first shape sampling passed. Outputs/report under quality_runs/pixal_mv_ranger_trial1. Camera/background limitations explicit; no quality claim.
+
+2026-10-04 Codex: independent MV clay renders completed; Z-up export corrected in viewer only. Recognizable Ranger but widespread holes; indexed topology fails. Same-seed non-tiled extraction control running session17682; no production acceptance.
+
+2026-10-04 Codex: tiled/non-tiled MV meshes canonical-identical, ruling out tiling for Ranger holes. Native fill/DC1024 surface control visually reduces pitting, but8408 nonmanifold edges and28zero-area faces remain; rejected production. Blender three-angle renders verified, all sessions terminal.
