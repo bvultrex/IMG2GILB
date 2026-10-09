@@ -101,8 +101,12 @@ else:
    texture=getattr(mesh.visual.material,slot,None)
    if texture is not None:setattr(mesh.visual.material,slot,texture.resize((s['texture_size'],s['texture_size']),Image.Resampling.LANCZOS))
  mesh.export(job/'output.glb')
- import copy
- mat=copy.deepcopy(mesh.visual.material);mat.metallicFactor=0.;mat.roughnessFactor=.8;mat.metallicRoughnessTexture=None;mesh.visual.material=mat;mesh.export(job/'preview_color.glb')
+ if s['textures']:
+  from color_preview import build_unlit
+  build_unlit(job/'output.glb', job/'preview_color.glb')
+ else:
+  # The material toggle is hidden without textures; no explicit material required.
+  (job/'preview_color.glb').write_bytes((job/'output.glb').read_bytes())
  scene=trimesh.load(job/'output.glb',process=False);check=next(iter(scene.geometry.values()))
  if abs(check.extents[1]-s['height_cm']/100)>1e-5:raise ValueError('Export height mismatch')
  if not np.isfinite(check.vertices).all():raise ValueError('Invalid exported positions')

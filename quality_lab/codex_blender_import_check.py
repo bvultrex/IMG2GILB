@@ -12,14 +12,24 @@ p = argparse.ArgumentParser()
 p.add_argument('--model', type=Path, required=True)
 p.add_argument('--out', type=Path, required=True)
 p.add_argument('--pbr', action='store_true', help='Keep imported material; render with neutral studio lights')
+p.add_argument('--matte', action='store_true', help='Keep base color, override metallic=0/roughness=1 in transient scene')
+p.add_argument('--material-channel', choices=['base', 'metallic', 'roughness'], default='base')
 p.add_argument('--clay', action='store_true', help='Replace materials transiently to isolate geometry defects')
 p.add_argument('--angles', type=float, nargs='+', default=[0], help='Azimuths in degrees; zero is front')
 p.add_argument('--resolution', type=int, default=640)
+p.add_argument('--top-fraction', type=float, default=1., help='Diagnostic camera framing of the top fraction; does not edit model')
 p.add_argument('--ply-up', choices=['y', 'z'], default='y', help='Declared PLY vertical axis')
 p.add_argument('--highlight-pairs',type=Path,help='Matching Blender BVH report; transient red face overlay')
 a = p.parse_args(sys.argv[sys.argv.index('--') + 1:])
-if a.clay and a.pbr:
-    p.error('--clay and --pbr are mutually exclusive')
+if not 0 < a.top_fraction <= 1:
+    p.error('--top-fraction must be in (0,1]')
+if sum((a.clay, a.pbr, a.matte)) > 1:
+    p.error('--clay, --pbr and --matte are mutually exclusive')
+if a.material_channel != 'base' and (a.clay or a.pbr or a.matte):
+    p.error('Material-channel audit uses unlit output only')
+matte_mode = a.matte
+if matte_mode:
+    a.pbr = True  # Identical lighting/camera/sampling to the PBR comparison.
 a.model = a.model.resolve()
 a.out = a.out.resolve()
 a.out.mkdir(parents=True, exist_ok=True)
@@ -50,7 +60,7 @@ report = {'source_sha256': source_hash, 'blender': bpy.app.version_string,
           'triangles': sum(len(p.vertices)-2 for o in meshes for p in o.data.polygons),
           'extents_m': list(hi-lo), 'images': images,
           'source_format': a.model.suffix.lower(), 'ply_up': a.ply_up if a.model.suffix.lower() == '.ply' else None,
-          'scope': 'Independent mesh import and '+('clay geometry render' if a.clay else 'PBR studio-light render' if a.pbr else 'base-color emission render')+'; Studio UI not covered'}
+          'scope': 'Independent mesh import and '+('clay geometry render' if a.clay else 'PBR studio-light render' if a.pbr else a.material_channel+' emission render')+'; Studio UI not covered'}
 if a.clay:
     clay = bpy.data.materials.new('AuditClay')
     clay.use_nodes = True
@@ -60,6 +70,19 @@ if a.clay:
     for obj in meshes:
         obj.data.materials.clear()
         obj.data.materials.append(clay)
+if matte_mode:
+    report['scope'] = 'Transient matte control; base color retained, metallic=0 roughness=1'
+    for mat in bpy.data.materials:
+        if not mat.use_nodes:
+            continue
+        shader = next((n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        if shader:
+            for name, value in [('Metallic', 0.), ('Roughness', 1.), ('Coat Weight', 0.)]:
+                socket = shader.inputs.get(name)
+                if socket is not None:
+                    for link in list(socket.links):
+                        mat.node_tree.links.remove(link)
+                    socket.default_value = value
 if a.highlight_pairs:
     assert a.clay and len(meshes)==1
     pair_report=json.loads(a.highlight_pairs.read_text(encoding='utf-8'))
@@ -83,11 +106,12 @@ for mat in ([] if a.pbr or a.clay else bpy.data.materials):
     output = next((n for n in nodes if n.type == 'OUTPUT_MATERIAL'), None)
     if principled and output:
         emission = nodes.new('ShaderNodeEmission')
-        base = principled.inputs['Base Color']
+        base = principled.inputs[{'base':'Base Color','metallic':'Metallic','roughness':'Roughness'}[a.material_channel]]
         if base.is_linked:
             links.new(base.links[0].from_socket, emission.inputs['Color'])
         else:
-            emission.inputs['Color'].default_value = base.default_value
+            value = base.default_value
+            emission.inputs['Color'].default_value = value if a.material_channel == 'base' else (value,value,value,1)
         links.new(emission.outputs[0], output.inputs['Surface'])
 scene = bpy.context.scene
 if a.pbr or a.clay:
@@ -112,22 +136,27 @@ scene.render.resolution_y = a.resolution
 scene.render.resolution_percentage = 100
 scene.render.film_transparent = True
 scene.view_settings.view_transform = 'Standard'
+if a.top_fraction < 1:
+    center.z = hi.z - (hi.z-lo.z)*a.top_fraction/2
 bpy.ops.object.camera_add(location=center + Vector((0, -extent*3, 0)))
 camera = bpy.context.object
 camera.rotation_euler = (center-camera.location).to_track_quat('-Z', 'Y').to_euler()
 camera.data.type = 'ORTHO'
-camera.data.ortho_scale = extent*1.12
+camera.data.ortho_scale = extent*1.12*a.top_fraction
 scene.camera = camera
 report['renders'] = []
+report['top_fraction'] = a.top_fraction
 for angle in a.angles:
     radians = math.radians(angle)
     camera.location = center + Vector((math.sin(radians), -math.cos(radians), 0))*extent*3
     camera.rotation_euler = (center-camera.location).to_track_quat('-Z', 'Y').to_euler()
     name = 'front' if angle == 0 else 'angle_'+str(angle).replace('.', '_')
-    scene.render.filepath = str(a.out/(name+('_clay.png' if a.clay else '_pbr.png' if a.pbr else '_unlit.png')))
+    suffix = '_'+a.material_channel+'.png' if a.material_channel != 'base' else ('_matte.png' if matte_mode else '_clay.png' if a.clay else '_pbr.png' if a.pbr else '_unlit.png')
+    scene.render.filepath = str(a.out/(name+suffix))
     bpy.ops.render.render(write_still=True)
     report['renders'].append({'azimuth':angle, 'resolution':a.resolution, 'path':scene.render.filepath})
 report['source_unchanged'] = hashlib.sha256(a.model.read_bytes()).hexdigest() == source_hash
+report['material_channel'] = a.material_channel
 assert report['source_unchanged']
 (a.out/'import_report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
 print('IMPORT_CHECK_PASS', json.dumps(report), flush=True)

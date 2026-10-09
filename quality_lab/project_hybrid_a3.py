@@ -1316,6 +1316,18 @@ def run(job: Path, out_dir: Path, landmarks_path: Path | None, vis_dir: Path | N
         else:
             view_boost = 1.0 if name in ("front", "back") else 0.55
         weight = a * incidence * view_boost
+        # Explicit diagnostic opt-in: keep source contributions separate so a
+        # surface-local ownership experiment need not repeat projection or infer
+        # source identity from the already mixed atlas. No output-mix change.
+        if getattr(renderer, "export_source_components", False):
+            component_path = out_dir / f"{name}_projection_components.npz"
+            np.savez_compressed(
+                component_path,
+                color=color.detach().cpu().numpy(),
+                weight=weight.detach().cpu().numpy(),
+                alpha=a.detach().cpu().numpy(),
+                incidence=incidence.detach().cpu().numpy(),
+            )
         if exclusive_face and name == 'front' and face_wmap is not None and align_meta.get('micro', {}).get('project_face'):
             # Experimental single-source mid-face: no Paint/side-view mixing here.
             face_mask = np.clip((face_wmap - 1.0) / 0.55, 0, 1)
@@ -1345,6 +1357,11 @@ def run(job: Path, out_dir: Path, landmarks_path: Path | None, vis_dir: Path | N
             "atlas_pixels_weight_above_half": int((weight > 0.5).sum().item()),
         }
         report["views"].append(view_report)
+        if getattr(renderer, "export_source_components", False):
+            view_report["source_components"] = {
+                "path": str(component_path), "sha256": sha256(component_path),
+                "scope": "Aligned reference in existing UVs; confidence is not semantic correctness",
+            }
         if iou < IOU_WARN and not used_landmarks:
             report["blockers"].append(
                 {

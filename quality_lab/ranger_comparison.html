@@ -1,0 +1,26 @@
+<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IMG2GILB · Ranger Vergleich</title><script type="module" src="/model-viewer.min.js"></script>
+<style>body{margin:0;background:#1b1e22;color:#e5e9e5;font:16px system-ui}header,footer{padding:18px 24px}h1{font-size:24px;color:#bbff66;margin:0 0 12px}nav{display:flex;flex-wrap:wrap;gap:10px;align-items:center}select,button,a{font:inherit;color:inherit;background:#30363a;border:1px solid #647064;border-radius:8px;padding:9px}a{color:#bbff66}model-viewer{width:100%;height:70vh;background:#25292d}p{max-width:95ch;color:#c0c8c0}#status{min-height:1.5em}label{display:flex;gap:8px;align-items:center}</style>
+<header><h1>Ranger · Texturvergleich</h1><nav>
+<select id="variant" aria-label="Modell"><option value="baseline">Baseline · generiert 768</option><option value="hybrid">Bisheriger Hybrid</option><option value="candidate">Kandidat · 1024 + Front/Rückseite</option><option value="head_only" selected>Experiment · Paint-Körper + Referenzkopf</option></select>
+<label><input id="unlit" type="checkbox" checked>Nur Farbe</label>
+<button data-angle="0">Front</button><button data-angle="35">+35°</button><button data-angle="-35">−35°</button><button data-angle="180">Rückseite</button>
+<a id="download" href="/model/head_only" download="ranger_candidate.glb">GLB speichern · mit PBR</a><a href="/bust">Zweites Motiv: B�ste</a></nav>
+<div id="status" role="status">Modell wird geladen …</div></header>
+<style>.renders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:0 24px}.renders figure{margin:0}.renders img{width:100%;display:block;background:#25292d}.renders figcaption{padding:8px 0}summary{cursor:pointer;padding:18px 24px;color:#bbff66}@media(max-width:650px){.renders{grid-template-columns:1fr}}</style>
+<p style="padding:0 24px">Gespeicherte Blender-Bilder: gleiche Kamera, ohne Beleuchtung. Sie funktionieren auch ohne WebGL. Die Blickwinkel-Schaltflächen wechseln alle vier Bilder gemeinsam.</p>
+<section class="renders"><figure><img data-render="baseline" src="/render/baseline/0" alt="Generative Baseline"><figcaption>Baseline · generiert 768</figcaption></figure><figure><img data-render="hybrid" src="/render/hybrid/0" alt="Bisheriger Hybrid"><figcaption>Bisheriger Hybrid</figcaption></figure><figure><img data-render="candidate" src="/render/candidate/0" alt="Neuer Kandidat"><figcaption>Kandidat · 1024 + Front/Rückseite</figcaption></figure><figure><img data-render="head_only" src="/render/head_only/0" alt="Paint-Körper mit Referenzkopf"><figcaption>Experiment · Paint-Körper + Referenzkopf (nicht freigegeben)</figcaption></figure></section>
+<details><summary>Nahaufnahme: UV-Maske und Tiefenrand vor / nach Korrektur</summary><section class="renders"><figure><img src="/detail/before" alt="Vor Masken-Randkorrektur"><figcaption>Vorher · zusätzliche feine UV-Linien</figcaption></figure><figure><img src="/detail/after" alt="Nach Masken-Randkorrektur"><figcaption>Nachher · feine UV-Linien entfernt, Kinnrand reduziert</figcaption></figure></section></details><details><summary>Interaktive 3D-Ansicht öffnen</summary><model-viewer id="viewer" src="/color/head_only" camera-controls camera-orbit="0deg 90deg 3m" camera-target="auto auto auto" exposure="1" shadow-intensity="0" interaction-prompt="none" alt="Ranger Qualitätsvergleich"></model-viewer></details>
+<footer><p>Beim Modellwechsel bleibt der Blickwinkel erhalten. „Nur Farbe“ zeigt die Textur ohne Beleuchtung; der Download enthält immer das ursprüngliche PBR-Modell. Der Kandidat ist experimentell: Seitenübergänge und Geometriefehler bleiben offen.</p></footer>
+<script>
+const viewer=document.getElementById('viewer'),variant=document.getElementById('variant'),unlit=document.getElementById('unlit'),download=document.getElementById('download'),status=document.getElementById('status');
+function update(){if(viewer.getCameraOrbit){const o=viewer.getCameraOrbit();viewer.cameraOrbit=`${o.theta}rad ${o.phi}rad ${o.radius}m`;}status.textContent='Modell wird geladen …';viewer.src=`/${unlit.checked?'color':'model'}/${variant.value}`;download.href=`/model/${variant.value}`;download.download=`ranger_${variant.value}.glb`;}
+variant.onchange=update;unlit.onchange=update;
+document.querySelectorAll('[data-angle]').forEach(button=>button.onclick=()=>{viewer.cameraOrbit=`${button.dataset.angle}deg 90deg 3m`;document.querySelectorAll('[data-render]').forEach(img=>img.src=`/render/${img.dataset.render}/${button.dataset.angle}`);});
+viewer.addEventListener('load',()=>status.textContent=variant.options[variant.selectedIndex].text+(unlit.checked?' · Farbe ohne Beleuchtung':' · PBR'));
+viewer.addEventListener('error',event=>status.textContent='3D-Vorschau nicht verfügbar ('+(event.detail?.type||'Ladefehler')+'). Die Vergleichsbilder und GLB-Downloads bleiben verfügbar.');
+setTimeout(()=>{if(!viewer.loaded)status.textContent='Die gespeicherten Vergleichsbilder sind unten sichtbar. Die 3D-Ansicht ist noch nicht bereit.';},15000);
+</script></html>
+
+
+

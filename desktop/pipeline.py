@@ -11,9 +11,24 @@ def optional_script(cfg, key, filename):
  candidate=Path(cfg.get(key,str(ROOT.parent/'quality_lab'/filename)))
  return candidate if candidate.is_file() else Path(cfg['lab'])/filename
 
+def paint_resolution(settings):
+ default=512 if settings['quality']=='fast' else 768
+ if not settings.get('experimental_paint_sequential',False):return str(default)
+ if type(settings.get('experimental_paint_ff_chunk',False)) is not bool:
+  raise ValueError('experimental_paint_ff_chunk must be a boolean')
+ if settings.get('paint_multiref') is not False:
+  raise ValueError('Experimental sequential Paint requires explicit paint_multiref=false; multi-reference sampling is not supported')
+ resolution=settings.get('paint_resolution',default)
+ if type(resolution) is not int or resolution not in (512,768,1024):
+  raise ValueError('Experimental Paint resolution must be 512, 768 or 1024')
+ return str(resolution)
+
 def texture_code_signature(cfg, settings):
  files=[]
  if settings.get('textures'):
+  if settings.get('experimental_paint_sequential',False):
+   runner=optional_script(cfg,'paint_sequential_script','run_paint_sequential.py')
+   files.extend([runner,runner.with_name('run_paint21_checkpoint.py'),runner.with_name('decode_paint_checkpoint.py'),ROOT/'process_guard.py'])
   if settings.get('paint_multiref',True):files.append(optional_script(cfg,'paint_multiref_script','run_paint_multiref.py'))
   if settings.get('hybrid_a3'):
    script=optional_script(cfg,'hybrid_a3_script','project_hybrid_a3.py');files.append(script)
@@ -118,13 +133,34 @@ class Job:
   action();self.check()
   if not all(p.is_file() for p in outputs):raise RuntimeError('Die Stufe hat nicht alle benötigten Dateien erzeugt.')
   cache[name]={'fingerprint':fingerprint,'files':{str(p.relative_to(self.path)):sha(p) for p in outputs}};write_json(file,cache)
+ def sequential_paint(self,settings):
+  # Fresh attempt directory keeps failed checkpoints/logs and cannot borrow stale maps.
+  attempt=self.path/'paint_attempts'/uuid.uuid4().hex
+  runner=optional_script(self.cfg,'paint_sequential_script','run_paint_sequential.py')
+  self.run_process([self.cfg['python'],str(runner),'--input',str(self.path/'prepared/front.png'),
+                    '--controls',str(self.path/'controls'),'--output',str(attempt),
+                    '--resolution',paint_resolution(settings)]+(['--ff-chunk'] if settings.get('experimental_paint_ff_chunk',False) else []))
+  report=json.loads((attempt/'sequential_report.json').read_text())
+  if report.get('status')!='passed' or report.get('stage')!='complete':
+   raise RuntimeError('Sequential Paint did not complete')
+  names=[f'{kind}_{n}.png' for kind in ('albedo','mr') for n in range(6)]
+  for name in names:
+   if report.get('outputs',{}).get(name)!=sha(attempt/name):
+    raise RuntimeError('Sequential Paint output checksum mismatch: '+name)
+  output=self.path/'paint';output.mkdir(exist_ok=True)
+  for name in names:
+   shutil.copy2(attempt/name,output/(name+'.pending'))
+   (output/(name+'.pending')).replace(output/name)
+  report['attempt']=str(attempt)
+  write_json(output/'sequential_report.json',report)
  def run(self):
   try:self._run()
   except Exception as exc:self.update(status='failed',error=str(exc),finished=time.time())
  def _run(self):
   spec=json.loads((self.path/'project.json').read_text());s=spec['settings'];c=self.cfg;lab=Path(c['lab']);py=c['python']
+  paint_res=paint_resolution(s) if s['textures'] else None
   stages=['prepare','shape']+(['remesh'] if s.get('remesh') else [])+(['uv','paint','bake'] if s['textures'] else [])+(['hybrid_a3'] if s['textures'] and s.get('hybrid_a3') else [])+(['face'] if s['face'] else [])+['finalize']+(['rig'] if s.get('rig') else [])
-  fingerprint=hashlib.sha256((json.dumps(spec,sort_keys=True)+sha(ROOT/'stages.py')+sha(ROOT/'pipeline.py')+sha(lab/'run_paint21.py')+sha(lab/'bake_paint21.py')+sha(ROOT/'runtime.json')+sha(ROOT/'rig_stage.py')+sha(ROOT/'validate_rig.py')+sha(ROOT/'walk_preview.py')+(sha(c['face_runtime'])+sum_face_code(Path(c['face_runtime']).parent)+sha(Path(c['face_runtime']).parent/'runtime.json') if s['face'] else '')).encode()).hexdigest()
+  fingerprint=hashlib.sha256((json.dumps(spec,sort_keys=True)+sha(ROOT/'stages.py')+sha(ROOT/'color_preview.py')+sha(ROOT/'pipeline.py')+sha(lab/'run_paint21.py')+sha(lab/'bake_paint21.py')+sha(ROOT/'runtime.json')+sha(ROOT/'rig_stage.py')+sha(ROOT/'validate_rig.py')+sha(ROOT/'walk_preview.py')+(sha(c['face_runtime'])+sum_face_code(Path(c['face_runtime']).parent)+sha(Path(c['face_runtime']).parent/'runtime.json') if s['face'] else '')).encode()).hexdigest()
   fingerprint=hashlib.sha256((fingerprint+texture_code_signature(c,s)).encode()).hexdigest()
   self.update(status='running',started=time.time(),stages=stages,error=None,completed_stages=0)
   try:
@@ -140,7 +176,7 @@ class Job:
      outputs=[self.path/'controls/uv_mesh.npz']+[self.path/'controls'/f'render_{kind}_multiview_{n}.png' for kind in ['normal','position'] for n in range(6)];action=lambda:stage_cmd('uv')
     elif stage=='paint':
      outputs=[self.path/'paint'/f'{kind}_{n}.png' for kind in ['albedo','mr'] for n in range(6)]
-     res='512' if s['quality']=='fast' else '768'
+     res=paint_res
      # Prefer multi-ref when enabled (default true if setting omitted and ?2 prepared views).
      use_multiref=s['paint_multiref'] if 'paint_multiref' in s else (sum(1 for v in ('front','back','left','right') if (self.path/'prepared'/f'{v}.png').exists())>=2)
      if use_multiref:
@@ -149,7 +185,10 @@ class Job:
        rp=self.path/'prepared'/f'{v}.png'
        if rp.exists():refs.append(str(rp))
       if len(refs)<2:use_multiref=False
-     if use_multiref:
+     if s.get('experimental_paint_sequential',False):
+      outputs.append(self.path/'paint/sequential_report.json')
+      action=lambda:self.sequential_paint(s)
+     elif use_multiref:
       multiref=optional_script(c,'paint_multiref_script','run_paint_multiref.py')
       cmd=[py,str(multiref),'--controls',str(self.path/'controls'),'--output',str(self.path/'paint'),'--views','6','--resolution',res,'--references',*refs]
       action=lambda cmd=cmd:self.run_process(cmd)
@@ -159,7 +198,7 @@ class Job:
      outputs=[self.path/'textured_pbr.glb',self.path/'textured_color.glb']
      tex_sr=s.get('texture_sr','pil')
      if tex_sr not in ('pil','realesrgan'):tex_sr='pil'
-     res='512' if s['quality']=='fast' else '768'
+     res=paint_res
      bake_cmd=[py,str(lab/'bake_paint21.py'),'--input',str(self.path/'paint'),'--uv-cache',str(self.path/'controls/uv_mesh.npz'),'--output-prefix',str(self.path/'textured'),'--views','6','--resolution',res,'--upscaler',tex_sr]
      action=lambda bake_cmd=bake_cmd:self.run_process(bake_cmd)
     elif stage=='hybrid_a3':
@@ -185,3 +224,4 @@ class Job:
 
 def sum_face_code(root):
  return "".join(sha(root/name) for name in ("core.py", "detect.py", "detection_policy.py", "render_adapter.py"))
+

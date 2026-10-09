@@ -347,3 +347,33 @@ TRELLIS1024 cascade (152.20s), direct (79.75s), full-guidance interval (84.81s) 
 TripoSG independently tested from official source fc5c40990181e2a756c4e0b1c2f4d6b5202faf8c and weights2c1c516d22d58db486a058d98d31bb6177344e06. Existing lab Python3.10 with isolated IMG2GILB-triposg-runtime/deps (jaxtyping0.3.3,typeguard4.4.4,wadler-lindig0.1.7). Optional DISO import moved inside unused flash path; official non-flash extraction dense7/final9 completed. Existing BRIA RGBA reused. 50steps/seed42/guidance7:37.953s,2,127,972 raw triangles,5.342GiB Torch peak. Blender clay inspection: two distorted lens rings; no whole-object breakthrough.
 TRELLIS raw winding cleanup and narrow-band remesh512 probes at target100k remain non-watertight. Do not present them as print-ready or final textured assets. Head-only geometry normalized to40cm for diagnostic display is not physically scaled to the full bust. No production UI/backend default or existing ComfyUI/rig packages changed. No active GPU benchmark remains.
 Next: spatially localized detail reconstruction with automatic ROI selection/registration/seam handling and rejection checks; feature concatenation alone is insufficient. Require three lenses on the complete bust, preserved silhouette, clean mesh and second-fixture validation before UI integration. Current findings are single-fixture, single-seed evidence, not a general model ranking. No claim of Meshy parity.
+
+## 2026-10-09 restart review
+Read quality_lab/RESTART_DECISION_2026-10-09.md before new experiments. Repo/main e23f04d; later local fourview outputs reviewed. front_back consumed front only, coherent1 admits pose mismatch and its front render label is suspect, texture attempt has no outputs/live process. Next deliverable is a complete texture-only final GLB on a clothed known fixture with matched before/after preview, not another open-ended geometry sweep. Production gates remain unpassed.
+
+2026-10-09 texture experiment: see quality_lab/RANGER_1024_RESULT_2026-10-09.md. 1024 candidate exists with Blender renders and preserved geometry/UV/MR; visual gate not passed due source-face drift. Native offload memory failure bypassed with persisted VAE input and fresh per-view decode. Next: source-face correction, not another sampling sweep.
+
+Latest: Ranger ownership_front_back candidate improves local texture fidelity; PBR views saved. Experimental run_reference_ownership.py now has detector-pair gate; guarded bust exported at quality_runs/bust_ownership_guarded_20261009/candidate.glb. Next verify guarded bust render and Ranger positive-control, then opt-in integration only after acceptance. All GPU jobs terminal.
+
+Latest verified deliverables: quality_runs/ranger_texture1024_20261009/studio_finalize/output.glb (1.70m) and quality_runs/bust_ownership_guarded_20261009/studio_finalize/output.glb (0.40m). Real finalize preserves mesh/UV/albedo/MR. Guarded Ranger equals prior reviewed GLB byte-for-byte; bust skips face alignment, but visual shape/alignment defects remain. No UI/default promotion, no fresh end-to-end claim.
+
+Color preview correction: desktop/color_preview.py and stages.py now make new static preview_color.glb genuinely unlit. PBR output unchanged. Independent Blender preview check exists in ranger_texture1024_20261009/studio_unlit_preview_check. Existing previews and rig animation preview remain separate follow-up; no quality-default promotion.
+
+Latest PBR steering: static color previews now export true KHR_materials_unlit (desktop/color_preview.py); original PBR output unchanged. Existing/rigged previews not migrated. Material semantics remain unaccepted; next check is alignment and differentiation of cloth/leather/metal, with fixed albedo. Browser preview/download verification still pending. Details: quality_lab/RANGER_1024_RESULT_2026-10-09.md.
+
+Ranger review delivery: quality_lab/serve_ranger_comparison.py hosts read-only three-way comparison on127.0.0.1:8192, using existing models and separate true-unlit previews. All three HTTP source hashes verified; browser open queued only. Candidate remains experimental. See quality_lab/RANGER_1024_RESULT_2026-10-09.md for remaining visual/integration gates.
+
+Side-reference follow-up: appearance differs across reference views (light side garment panels, hood colors), so high silhouette IoU is insufficient. Conservative agreement-gated side replay was rejected for trouser transitions/no substantial gain. Keep front/back candidate and prioritize coherent source design/semantic alignment before reintroducing sides. Detailed evidence in RANGER_1024_RESULT_2026-10-09.md.
+
+## Vollständiger Wiederaufnahmestand 2026-10-09
+Zuerst `quality_lab/HANDOFF_2026-10-09_TEXTURE_RESTART.md` lesen: Ziele, Pfade, getestete/verworfenene Kandidaten, Diagnosekorrekturen, PBR, Codeänderungen, Prozesse und nächste Schritte. Frischer sequenzieller1024Paintlauf ist abgeschlossen/passed (32096 beendet); nur Vergleichsserver17300 auf8192 bleibt. Bildervergleich ergänzt und technisch geprüft, Browserdarstellung noch nicht direkt bestätigt. Keine Produktionsfreigabe.
+
+Integration follow-up: opt-in sequential Paint now wired in pipeline with explicit experimental settings, shared bake resolution, checksum verification and code fingerprints.7CPUtests pass. NoUIdefault or qualitypromotion; fullStudiochain notrerun. Updated details in quality_lab/HANDOFF_2026-10-09_TEXTURE_RESTART.md.
+
+Export follow-up: geometry-only GLBs without materials now bypass unlit conversion (preview copies valid original). Real finalize regression test passed; textured true-unlit path preserved. Defaultfinalize does not automatically promote Hybrid sidecars; qualitygates remain. Fullrestart handoff updated.
+
+LIVE EXPERIMENT: Qwen side-reference edit on8193, session37414, prompt e0d807a2-8ff5-4401-b53d-af5195750cbe. Read latest fullhandoff before starting any GPUjob; do not duplicate this one.
+
+Latest terminal update: see quality_lab/HANDOFF_2026-10-09_TEXTURE_RESTART.md. Ranger static comparison images available on8192. Qwen reference edit FAILED before sampling with Windows1455; C free2.68GiB/pagefile3.76GiB. Queue empty, no new image/GLB, no promotion. Full trace in local history_normalvram.json.
+
+Latest: isolated Qwen edit now completed successfully using DynamicVRAM and disabled pinned memory. Image-only result and limitations in quality_lab/HANDOFF_2026-10-09_TEXTURE_RESTART.md; no new GLB/promotion. Queue empty.
